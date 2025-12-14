@@ -6,5 +6,11 @@ dist/
 wheels/
 *.egg-info
 
+
 # Virtual environments
 .venv
+
+testt.py
+
+check/*
+!check/.gitkeep
