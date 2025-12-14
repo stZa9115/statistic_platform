@@ -14,6 +14,12 @@
       <button id="runAll" class="bg-green-500 text-white px-4 py-2 rounded">▶ 一鍵執行全部</button>
       <button id = "downloadExample" class="bg-purple-500 text-white px-4 py-2 rounded">
         <a href="./sample/t_test_data.xlsx" download>下載範例檔案</a>
+      </button>
+      <button id="downloadZip"
+        class="bg-indigo-600 text-white px-4 py-2 rounded">
+        下載全部結果 (ZIP)
+      </button>
+
     </div>
 
     <div id="blocksContainer"></div>
@@ -125,6 +131,41 @@
     addBlock();
     document.getElementById("addBlock").addEventListener("click", addBlock);
     document.getElementById("runAll").addEventListener("click", runAll);
+    document.getElementById("downloadZip").addEventListener("click", async () => {
+      const taskIds = blocks
+        .map(b => b.task_id)
+        .filter(id => id !== null);
+
+      if (taskIds.length === 0) {
+        alert("尚無可下載的結果");
+        return;
+      }
+
+      const res = await fetch(
+        "http://127.0.0.1:5000/independentTtest/download_zip",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(taskIds)
+        }
+      );
+
+      if (!res.ok) {
+        alert("下載失敗");
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "t_test_results.zip";
+      a.click();
+
+      URL.revokeObjectURL(url);
+    });
+
   </script>
 </body>
 </html>

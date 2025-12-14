@@ -12,6 +12,10 @@ from tempfile import NamedTemporaryFile
 import shutil
 from costomTools.santize import sanitize_filename
 
+from fastapi import Body
+from zipfile import ZipFile
+from tempfile import NamedTemporaryFile
+
 RESULT_DIR = "results"
 # EXPIRE_SECONDS = 60 * 60  # 1 小時
 EXPIRE_SECONDS = 60  # 5 分鐘
@@ -104,3 +108,39 @@ def download(task_id: str):
         filename=download_name,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
+@app.post("/independentTtest/download_zip")
+def download_zip(task_ids: list[str] = Body(...)):
+    if not task_ids:
+        raise HTTPException(status_code=400, detail="沒有選擇任何結果")
+
+    with NamedTemporaryFile(delete=False, suffix=".zip") as tmp_zip:
+        zip_path = tmp_zip.name
+
+    try:
+        with ZipFile(zip_path, "w") as zipf:
+            for task_id in task_ids:
+                result_path = os.path.join(RESULT_DIR, f"{task_id}.xlsx")
+                meta_path = os.path.join(RESULT_DIR, f"{task_id}.meta")
+
+                if not os.path.exists(result_path):
+                    continue  # 已過期或不存在
+
+                # 讀原始檔名
+                original_name = "uploaded_file"
+                if os.path.exists(meta_path):
+                    with open(meta_path, encoding="utf-8") as f:
+                        original_name = f.read().strip()
+
+                filename_in_zip = f"t_test_result_{original_name}.xlsx"
+                zipf.write(result_path, arcname=filename_in_zip)
+
+        return FileResponse(
+            zip_path,
+            filename="t_test_results.zip",
+            media_type="application/zip"
+        )
+
+    finally:
+        # ⚠️ FileResponse 傳完後再刪（保險起見可延後）
+        pass
