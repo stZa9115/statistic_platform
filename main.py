@@ -10,6 +10,7 @@ import pandas as pd
 from stat_code.independentTtest import t_test
 from tempfile import NamedTemporaryFile
 import shutil
+from costomTools.santize import sanitize_filename
 
 RESULT_DIR = "results"
 # EXPIRE_SECONDS = 60 * 60  # 1 小時
@@ -59,7 +60,7 @@ async def upload(file: UploadFile = File(...)):
     meta_path = os.path.join(RESULT_DIR, f"{task_id}.meta")
 
     original_name = os.path.splitext(file.filename)[0]
-
+    original_name = sanitize_filename(original_name, max_length=30)
     with NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
         shutil.copyfileobj(file.file, tmp)
         tmp_path = tmp.name
