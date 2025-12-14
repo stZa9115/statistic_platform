@@ -1,0 +1,2 @@
+def printOK():
+    print("OK")
