@@ -17,8 +17,8 @@ from zipfile import ZipFile
 from tempfile import NamedTemporaryFile
 
 RESULT_DIR = "results"
-# EXPIRE_SECONDS = 60 * 60  # 1 小時
-EXPIRE_SECONDS = 60  # 5 分鐘
+# EXPIRE_SECONDS = 60 * 60  
+EXPIRE_SECONDS = 30  
 
 os.makedirs(RESULT_DIR, exist_ok=True)
 
@@ -49,7 +49,7 @@ def cleanup_worker():
                 except Exception as e:
                     print("[CLEANUP ERROR]", e)
         time.sleep(10)
-        # time.sleep(300)  # 每 5 分鐘掃一次
+        # time.sleep(300)  
 
 @app.on_event("startup")
 def start_cleanup():

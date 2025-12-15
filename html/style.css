@@ -1,0 +1,212 @@
+body {
+  font-family: Arial, sans-serif;
+  background-color: #e7d8c9;
+  margin: 0;
+  padding: 40px 0;
+  text-align: center;
+}
+
+.container {
+  width: 80%;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.title {
+  font-size: 2.5em;
+  background-color: #fcd5ce;
+  padding: 30px;
+  border-radius: 50px;
+  margin-bottom: 80px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* 按鈕區塊設定 */
+.small-buttons,
+.large-buttons {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 35px;
+}
+
+.small-buttons a,
+.large-buttons a {
+  text-decoration: none;
+  color: black;
+  padding: 20px 25px;
+  border-radius: 15px;
+  font-size: 1.2em;
+  display: inline-block;
+  transition: filter 0.3s;
+}
+
+/* 小按鈕樣式 */
+.small-buttons a {
+  width: 130px;
+}
+
+/* 小按鈕顏色 */
+.btn-1 { background-color: #ccd5ae; }
+.btn-2 { background-color: #e3ecf3; }
+.btn-3 { background-color: #eee4e1; }
+.btn-4 { background-color: #ffb5a7; }
+.btn-5 { background-color: #fec89a; }
+
+/* 大按鈕樣式 */
+.large-buttons a {
+  width: 260px;
+}
+
+/* 大按鈕顏色 */
+.btn-6 { background-color: #c4dbd9; }
+.btn-7 { background-color: #bed06f; }
+.btn-8 { background-color: #769edb; }
+.btn-9 { background-color: #f3e7e3; }
+.btn-10 { background-color: #ad85bd; }
+.btn-11 { background-color: #b8d8be; }
+
+/* hover 效果 */
+.small-buttons a:hover,
+.large-buttons a:hover,
+.back-button:hover {
+  filter: brightness(1.1);
+}
+
+@media (max-width: 768px) {
+  .small-buttons a,
+  .large-buttons a,
+  .back-button {
+    width: 100%;
+    font-size: 1em;
+    padding: 15px;
+  }
+
+  .title {
+    font-size: 2em;
+    padding: 20px;
+  }
+
+  .container {
+    padding: 0 15px;
+  }
+}
+
+ul {
+  text-align: left; /* 將 ul 內的文字靠左對齊 */
+  list-style-position: inside; /* 讓項目符號也在容器內 */
+  line-height: 1.8; /* 將行高設定為字體大小的1.8倍 */
+}
+
+ol {
+  text-align: left;
+  list-style-position: inside;
+  line-height: 1.8;
+}
+
+h3 {
+  text-align: left;      /* 確保小標題靠左對齊 */
+  margin-top: 50px;
+  margin-bottom: 0px; /* 將下邊距設為0，可以消除大部分空隙 */
+  padding-left: 20px;
+}
+
+/* 新增：回到首頁按鈕的樣式 */
+.back-button-container {
+  text-align: center; /* 讓按鈕在容器中置中 */
+  margin-top: 100px; /* 在上方留出間距 */
+  margin-bottom: 20px; /* 在下方留出間距 */
+}
+
+.back-button {
+  color: black;
+  background-color: #fcd5ce;
+  text-decoration: none;
+  border-radius: 15px;
+  display: inline-block;
+  transition: filter 0.3s;
+  width: 100px; /* 設定按鈕寬度 */
+  padding: 15px 25px; /* 調整內邊距 */
+  font-size: 1.2em;
+}
+
+.align-left {
+    text-align: left;
+    padding-left: 20px;
+}
+
+/* 1. 主內容的 Flex 佈局 */
+.main-content-wrapper {
+  display: flex;
+  justify-content: space-between; /* 讓左右兩欄分開 */
+  align-items: flex-start; /* 頂部對齊 */
+  gap: 30px; /* 兩欄之間的間距 */
+}
+
+/* 2. 左側文字內容欄 */
+.text-content {
+  flex: 1; /* 佔用大部分可用空間 */
+}
+
+/* 3. 右側按鈕欄 */
+.sidebar-button-container {
+  flex-shrink: 0; /* 防止按鈕被壓縮 */
+  margin-top: 50px; /* 讓按鈕大致對齊第一個 h3 標題 */
+}
+
+/* 4. 新按鈕的樣式 
+    (我們複製 .large-buttons a 的屬性，以便獨立使用) 
+*/
+.sidebar-button-style {
+  text-decoration: none;
+  color: black;
+  padding: 20px 25px;
+  border-radius: 15px;
+  font-size: 1.2em;
+  display: inline-block;
+  transition: filter 0.3s;
+  width: 260px; /* 這是 .large-buttons a 的寬度 */
+  box-sizing: border-box; /* 確保 padding 不會撐開寬度 */
+}
+
+/* 5. 新按鈕的 hover 效果 */
+.sidebar-button-style:hover {
+  filter: brightness(1.1);
+}
+
+
+/* 6. 在 RWD 中調整 (複製您原有的中斷點) */
+@media (max-width: 768px) {
+  
+  /* 讓左右佈局在手機上改為垂直堆疊 */
+  .main-content-wrapper {
+    flex-direction: column;
+    align-items: center; /* 讓內容置中 */
+  }
+
+  .text-content {
+    width: 100%; /* 佔滿寬度 */
+  }
+
+  .sidebar-button-container {
+    margin-top: 30px; /* 調整手機版間距 */
+    width: 100%;
+  }
+
+  /* 讓新按鈕在手機上也變成 100% 寬 */
+  .sidebar-button-style {
+    width: 100%;
+    font-size: 1em;
+    padding: 15px;
+  }
+}
+
+/* --- 計數器的樣式 --- */
+.visitor-counter {
+  margin-top: 50px; /* 和上方按鈕的間距 */
+  margin-bottom: 20px; /* 和頁面底部的間距 */
+  text-align: center; /* 確保計數器本身置中 */
+  transform: scale(1.5);
+}

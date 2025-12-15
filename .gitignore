@@ -10,7 +10,7 @@ wheels/
 # Virtual environments
 .venv
 
-testt.py
+test.py
 
 check/*
 !check/.gitkeep
