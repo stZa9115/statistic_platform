@@ -58,38 +58,6 @@ def start_cleanup():
     t = threading.Thread(target=cleanup_worker, daemon=True)
     t.start()
 
-
-@app.post("/independentTtest/upload")
-async def upload(file: UploadFile = File(...)):
-    task_id = str(uuid.uuid4())
-    result_path = os.path.join(RESULT_DIR, f"{task_id}.xlsx")
-    meta_path = os.path.join(RESULT_DIR, f"{task_id}.meta")
-
-    original_name = os.path.splitext(file.filename)[0]
-    original_name = sanitize_filename(original_name, max_length=30)
-    with NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
-        shutil.copyfileobj(file.file, tmp)
-        tmp_path = tmp.name
-
-    try:
-        df = pd.read_excel(tmp_path)
-        result_dict = t_test(df)
-        result_df = pd.DataFrame(result_dict).fillna("")
-        result_df.to_excel(result_path, index=False)
-
-        # 🔹 存原始檔名
-        with open(meta_path, "w", encoding="utf-8") as f:
-            f.write(original_name)
-
-    finally:
-        os.remove(tmp_path)
-
-    return {
-        "task_id": task_id,
-        "columns": list(result_df.columns),
-        "data": result_df.reset_index().to_dict(orient="records")
-    }
-
 @app.post("/stat/{test_name}/upload")
 async def upload_new(test_name: str, file:UploadFile = File(...)):
     if test_name not in REGISTRY:
@@ -137,34 +105,6 @@ async def upload_new(test_name: str, file:UploadFile = File(...)):
     }
 
 
-
-
-##################################################################################
-## old_version, ready to delete
-@app.get("/independentTtest/download/{task_id}")
-def download(task_id: str):
-    path = os.path.join(RESULT_DIR, f"{task_id}.xlsx")
-    meta_path = os.path.join(RESULT_DIR, f"{task_id}.meta")
-
-    if not os.path.exists(path):
-        print('oops')
-        raise HTTPException(status_code=404, detail="檔案不存在或已過期")
-
-    original_name = "uploaded_file"
-    if os.path.exists(meta_path):
-        with open(meta_path, encoding="utf-8") as f:
-            original_name = f.read().strip()
-
-    download_name = f"t_test_result_{original_name}.xlsx"
-
-    return FileResponse(
-        path,
-        filename=download_name,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
-
-
-
 @app.get("/stat/download/{task_id}")
 def download_stat(task_id: str):
     path = os.path.join(RESULT_DIR, f"{task_id}.xlsx")
@@ -188,47 +128,6 @@ def download_stat(task_id: str):
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
-
-##################################################################################
-## old_version, ready to delete
-@app.post("/independentTtest/download_zip")
-def download_zip(task_ids: list[str] = Body(...)):
-    if not task_ids:
-        raise HTTPException(status_code=400, detail="沒有選擇任何結果")
-
-    with NamedTemporaryFile(delete=False, suffix=".zip") as tmp_zip:
-        zip_path = tmp_zip.name
-
-    try:
-        with ZipFile(zip_path, "w") as zipf:
-            for task_id in task_ids:
-                result_path = os.path.join(RESULT_DIR, f"{task_id}.xlsx")
-                meta_path = os.path.join(RESULT_DIR, f"{task_id}.meta")
-
-                if not os.path.exists(result_path):
-                    continue  # 已過期或不存在
-
-                # 讀原始檔名
-                original_name = "uploaded_file"
-                if os.path.exists(meta_path):
-                    with open(meta_path, encoding="utf-8") as f:
-                        original_name = f.read().strip()
-
-                filename_in_zip = f"t_test_result_{original_name}.xlsx"
-                zipf.write(result_path, arcname=filename_in_zip)
-
-        return FileResponse(
-            zip_path,
-            filename="t_test_results.zip",
-            media_type="application/zip"
-        )
-
-    finally:
-        # ⚠️ FileResponse 傳完後再刪（保險起見可延後）
-        pass
-
-
-##################################################################################
 @app.post("/stat/download_zip")
 def download_zip_stat(task_ids: list[str] = Body(...)):
     if not task_ids:
@@ -259,7 +158,7 @@ def download_zip_stat(task_ids: list[str] = Body(...)):
 
         return FileResponse(
             zip_path,
-            filename="t_test_results.zip",
+            filename=f"a.zip",
             media_type="application/zip"
         )
 
