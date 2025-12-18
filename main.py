@@ -7,7 +7,7 @@ import os
 import time
 import threading
 import pandas as pd
-from stat_code.independentTtest import t_test
+from stat_code import t_test
 from tempfile import NamedTemporaryFile
 import shutil
 from costomTools.santize import sanitize_filename
@@ -73,7 +73,7 @@ async def upload(file: UploadFile = File(...)):
         df = pd.read_excel(tmp_path)
         result_dict = t_test(df)
         result_df = pd.DataFrame(result_dict).fillna("")
-        result_df.to_excel(result_path, index=True)
+        result_df.to_excel(result_path, index=False)
 
         # 🔹 存原始檔名
         with open(meta_path, "w", encoding="utf-8") as f:
