@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 import scipy.stats as st
 from scipy import stats
+from .base import statTest
+from . import register
 
 def t_test(data: pd.DataFrame):
     col = data.columns
@@ -64,3 +66,12 @@ def t_test(data: pd.DataFrame):
     }
 
     return results
+
+@register
+class IndependentTTest(statTest):
+    name = "independentTtest"
+    display_name = "獨立樣本 t 檢定"
+    result_prefix = "Result_independent_t_test_"
+
+    def run(self, df: pd.DataFrame):
+        return t_test(df)
