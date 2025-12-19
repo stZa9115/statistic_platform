@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>成對T-test 檢定工具</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-red-100 p-6">
+  <div class="max-w-5xl mx-auto">
+    <h1 class="text-xl font-bold mb-4">成對T-test 檢定工具</h1>
+
+    <div class="flex space-x-4 mb-4">
+      <button id="addBlock" class="bg-blue-500 text-white px-4 py-2 rounded">+ 新增檢定</button>
+      <button id="runAll" class="bg-green-500 text-white px-4 py-2 rounded">▶ 一鍵執行全部</button>
+      <button id = "downloadExample" class="bg-purple-500 text-white px-4 py-2 rounded">
+        <a href="../sample/t_test_data.xlsx" download>下載範例檔案</a>
+      </button>
+      <button id="downloadZip"
+        class="bg-indigo-600 text-white px-4 py-2 rounded">
+        下載全部結果 (ZIP)
+      </button>
+
+    </div>
+
+    <div id="blocksContainer"></div>
+  </div>
+
+  <template id="blockTemplate">
+    <div class="bg-white shadow-lg rounded-2xl p-6 mb-6 border border-gray-300 relative">
+      <button type="button" 
+  class="deleteBlock absolute top-2 right-2 
+         bg-red-500 text-white w-8 h-8 flex items-center justify-center
+         rounded-full hover:bg-red-700 font-bold text-lg">
+  ✕
+</button>
+
+      <form class="uploadForm flex items-center space-x-4 mb-4">
+        <input type="file" name="file" class="fileInput border p-2 rounded" required>
+        <a class="downloadLink hidden bg-purple-500 text-white px-4 py-2 rounded">下載結果</a>
+      </form>
+
+      <table class="table-auto border-collapse border border-gray-400 w-full text-center text-sm">
+        <thead><tr class="resultHeader"></tr></thead>
+        <tbody class="resultTable">
+          <tr><td colspan="10" class="p-4 text-gray-500">尚無結果</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </template>
+
+  <script>
+    const blocksContainer = document.getElementById("blocksContainer");
+    const blockTemplate = document.getElementById("blockTemplate");
+    let blocks = [];
+
+    function addBlock() {
+      const clone = blockTemplate.content.cloneNode(true);
+      const block = clone.querySelector("div");
+
+      const fileInput = block.querySelector(".fileInput");
+      const resultHeader = block.querySelector(".resultHeader");
+      const resultTable = block.querySelector(".resultTable");
+      const downloadLink = block.querySelector(".downloadLink");
+      const deleteBtn = block.querySelector(".deleteBlock");
+
+      deleteBtn.addEventListener("click", () => {
+        block.remove();
+        blocks = blocks.filter(b => b.block !== block);
+      });
+
+      blocks.push({ block, fileInput, resultHeader, resultTable, downloadLink, task_id: null });
+      blocksContainer.appendChild(block);
+    }
+
+    async function runAll() {
+      for (const block of blocks) {
+        const file = block.fileInput.files[0];
+        if (!file) {
+          block.resultTable.innerHTML = `<tr><td colspan="10" class="text-yellow-500 p-2">未上傳檔案，已略過</td></tr>`;
+          continue;
+        }
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        // 呼叫 API
+        // const res = await fetch("http://127.0.0.1:5000/stat/independentTtest/upload", {   // ← 你的後端 API
+        //   method: "POST",
+        //   body: formData
+        // });
+        const res = await fetch("http://127.0.0.1:5000/stat/pairedTtest/upload", {   // ← 你的後端 API
+          method: "POST",
+          body: formData
+        });
+        const data = await res.json();
+        console.log(data);
+        block.resultHeader.innerHTML = "";
+        block.resultTable.innerHTML = "";
+
+        if (data.error) {
+          block.resultTable.innerHTML = `<tr><td colspan="10" class="text-red-500 p-2">${data.error}</td></tr>`;
+          continue;
+        }
+
+        // 儲存這次任務的 task_id，之後用來下載
+        block.task_id = data.task_id;
+
+        // 填表頭
+        data.columns.forEach(col => {
+          const th = document.createElement("th");
+          th.className = "border border-gray-400 px-2 py-1";
+          th.textContent = col;
+          block.resultHeader.appendChild(th);
+        });
+
+        // 填資料
+        data.data.forEach(row => {
+          const tr = document.createElement("tr");
+          data.columns.forEach(col => {
+            const td = document.createElement("td");
+            td.className = "border border-gray-400 px-2 py-1";
+            td.textContent = row[col];
+            tr.appendChild(td);
+          });
+          block.resultTable.appendChild(tr);
+        });
+
+        // 設定下載連結
+        block.downloadLink.classList.remove("hidden");
+        // block.downloadLink.href = `http://127.0.0.1:5000/independentTtest/download/${block.task_id}`;
+        block.downloadLink.href = `http://127.0.0.1:5000/stat/download/${block.task_id}`;
+      }
+    }
+
+    addBlock();
+    document.getElementById("addBlock").addEventListener("click", addBlock);
+    document.getElementById("runAll").addEventListener("click", runAll);
+    document.getElementById("downloadZip").addEventListener("click", async () => {
+      const taskIds = blocks
+        .map(b => b.task_id)
+        .filter(id => id !== null);
+
+      if (taskIds.length === 0) {
+        alert("尚無可下載的結果");
+        return;
+      }
+
+      const res = await fetch(
+        "http://127.0.0.1:5000/stat/download_zip",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(taskIds)
+        }
+      );
+
+      if (!res.ok) {
+        alert("下載失敗");
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "成對T檢定.zip";
+      a.click();
+
+      URL.revokeObjectURL(url);
+    });
+
+  </script>
+</body>
+</html>

@@ -5,7 +5,7 @@ from scipy import stats
 from .base import statTest
 from . import register
 
-def t_test(data: pd.DataFrame):
+def paired_t_test(data: pd.DataFrame):
     col = data.columns
     if len(col) < 2:
         raise ValueError("資料需要至少兩個欄位才能進行 t-test")
@@ -20,12 +20,13 @@ def t_test(data: pd.DataFrame):
 
     # --- 選擇方法 ---
     if p1 < 0.05 or p2 < 0.05 or levene_p < 0.05:
-        method = "Mann_Whitney U"
-        p_value = stats.mannwhitneyu(group1, group2, alternative='two-sided').pvalue
+        method = "Wilcoxon Signed-Rank"
+        # p_value = stats.mannwhitneyu(group1, group2, alternative='two-sided').pvalue
+        p_value = stats.wilcoxon(group1, group2).pvalue
     else:
         equal_var = levene_p >= 0.05
-        method = f"t-test ({'Equal Var' if equal_var else 'Unequal Var'})"
-        p_value = stats.ttest_ind(group1, group2, equal_var=equal_var).pvalue
+        method = f"Paired t-test"
+        p_value = stats.ttest_rel(group1, group2).pvalue
 
     # --- 結果組成 ---
     results = [
@@ -68,10 +69,20 @@ def t_test(data: pd.DataFrame):
     return results
 
 @register
-class IndependentTTest(statTest):
-    name = "independentTtest"
-    display_name = "獨立樣本 t 檢定"
-    result_prefix = "independent_t_test"
+class pairedTTest(statTest):
+    name = "pairedTtest"
+    display_name = "成對樣本 t 檢定"
+    result_prefix = "paired_t_test"
 
     def run(self, df: pd.DataFrame):
-        return t_test(df)
+        return paired_t_test(df)
+    
+if __name__ == "__main__":
+    # 測試用
+    data = pd.DataFrame({
+        "A": [1,2,3,4,5,6,7,8,9,10],
+        "B": [2,3,4,5,6,7,8,9,10,11],
+    })
+    result = paired_t_test(data)
+    result = pd.DataFrame(result)
+    result.to_csv("./check/test_independent_t_test_result.csv", index=False)
