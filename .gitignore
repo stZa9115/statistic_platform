@@ -8,10 +8,10 @@ wheels/
 
 
 # Virtual environments
-.venv
+backend/.venv
 
-test.py
-results/
-check/*
+backend/test.py
+backend/results/
+backend/check/*
 
-!check/.gitkeep
+!backend/check/.gitkeep

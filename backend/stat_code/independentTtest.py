@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 import scipy.stats as st
 from scipy import stats
+from .base import statTest
+from . import register
 
 def t_test(data: pd.DataFrame):
     col = data.columns
@@ -59,8 +61,18 @@ def t_test(data: pd.DataFrame):
         "Normality p": [np.round(p1,2), np.round(p2,2)],
         "Levene p": [np.round(levene_p,2), None],
         "Method": [method, None],
-        "p-value": [np.round(p_value,2), None],
+        # "p-value": [p_value<np.round(p_value,2), None],
+        "p-value": ["p<0.05" if p_value < 0.05 else np.round(p_value, 2), None],
         "is_diff": [p_value < 0.05, None],
     }
 
     return results
+
+@register
+class IndependentTTest(statTest):
+    name = "independentTtest"
+    display_name = "獨立樣本 t 檢定"
+    result_prefix = "independent_t_test"
+
+    def run(self, df: pd.DataFrame):
+        return t_test(df)
