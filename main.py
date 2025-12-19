@@ -57,6 +57,8 @@ def cleanup_worker():
 def start_cleanup():
     t = threading.Thread(target=cleanup_worker, daemon=True)
     t.start()
+    print('REGISTRY:', REGISTRY.keys())
+
 
 @app.post("/stat/{test_name}/upload")
 async def upload_new(test_name: str, file:UploadFile = File(...)):

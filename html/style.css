@@ -210,3 +210,101 @@ h3 {
   text-align: center; /* 確保計數器本身置中 */
   transform: scale(1.5);
 }
+
+/* =========================
+   統計檢定分頁識別色
+   ========================= */
+
+body[class^="stat-"] {
+  --stat-bg: #e7d8c9;
+  --stat-title: #fcd5ce;
+  --stat-accent: #ccd5ae;
+  --stat-accent-hover: #bed06f;
+}
+
+/* =========================
+   各檢定專屬配色
+   ========================= */
+
+/* 獨立樣本 T 檢定 */
+body.stat-independent {
+  --stat-bg: #e7f0ee;
+  --stat-title: #c4dbd9;
+  --stat-accent: #5fa8a3;
+  --stat-accent-hover: #3f8f89;
+}
+
+/* 成對樣本 T 檢定 */
+body.stat-new_indipendent {
+  --stat-bg: #f5eee6;
+  --stat-title: #fec89a;
+  --stat-accent: #f4a261;
+  --stat-accent-hover: #e76f51;
+}
+
+body.stat-paired {
+  --stat-bg: #eef1f8;
+  --stat-title: #769edb;
+  --stat-accent: #5c7cfa;
+  --stat-accent-hover: #364fc7;
+}
+
+/* 卡方 */
+body.stat-anova {
+  --stat-bg: #f3eef6;
+  --stat-title: #ad85bd;
+  --stat-accent: #9c6fb6;
+  --stat-accent-hover: #7048a8;
+}
+
+body[class^="stat-"] {
+  background-color: var(--stat-bg);
+}
+
+body[class^="stat-"] .title {
+  background-color: var(--stat-title);
+}
+body[class^="stat-"] .sidebar-button-style {
+  background-color: var(--stat-accent);
+}
+body[class^="stat-"] .downloadLink {
+  background-color: var(--stat-accent);
+}
+
+body[class^="stat-"] .downloadLink:hover {
+  background-color: var(--stat-accent-hover);
+}
+
+/* =========================
+   統計檢定入口頁（statisticList）
+   按鈕 hover 對應檢定色
+   ========================= */
+
+body.stat-list .small-buttons a {
+  transition: background-color 0.25s, transform 0.15s;
+}
+
+/* 獨立樣本 T 檢定 */
+body.stat-list .small-buttons .btn-1:hover {
+  background-color: #5fa8a3;   /* stat-independent --stat-accent */
+  transform: translateY(-2px);
+}
+
+/* 成對樣本 T 檢定 */
+body.stat-list .small-buttons .btn-2:hover {
+  background-color: #f4a261;   /* stat-paired --stat-accent */
+  transform: translateY(-2px);
+}
+
+/* ANOVA */
+body.stat-list .small-buttons .btn-3:hover {
+  background-color: #5c7cfa;   /* stat-anova --stat-accent */
+  transform: translateY(-2px);
+}
+
+/* 卡方（預留） */
+body.stat-list .small-buttons .btn-4:hover {
+  background-color: #9c6fb6;   /* stat-chi --stat-accent */
+  transform: translateY(-2px);
+}
+

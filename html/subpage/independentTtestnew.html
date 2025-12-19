@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>獨立樣本 T 檢定</title>
+
+  <!-- 使用你既有的整站樣式 -->
+  <link rel="stylesheet" href="../style.css" />
+
+  <!-- 少量補充樣式（僅限本頁） -->
+  <style>
+    .action-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: center;
+      margin-bottom: 40px;
+    }
+
+    .action-buttons button,
+    .action-buttons a {
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .block-card {
+      background-color: white;
+      border-radius: 25px;
+      padding: 25px;
+      margin-bottom: 40px;
+      position: relative;
+    }
+
+    .deleteBlock {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      background-color: #ffb5a7;
+      border: none;
+      border-radius: 50%;
+      width: 35px;
+      height: 35px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      font-size: 0.95em;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+    }
+
+    th {
+      background-color: #eee4e1;
+    }
+
+    .upload-row {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 15px;
+    }
+
+    .downloadLink {
+      background-color: #c4dbd9;
+      padding: 10px 20px;
+      border-radius: 12px;
+      text-decoration: none;
+      color: black;
+      display: none;
+    }
+  </style>
+</head>
+
+<body class="stat-new_indipendent">
+  <div class="container">
+
+    <!-- 標題 -->
+    <div class="title">獨立樣本 T 檢定</div>
+
+    <!-- 操作按鈕 -->
+    <div class="action-buttons">
+      <button id="addBlock" class="sidebar-button-style btn-6">＋ 新增檢定</button>
+      <button id="runAll" class="sidebar-button-style btn-7">▶ 一鍵執行全部</button>
+
+      <a href="../sample/t_test_data.xlsx"
+         download
+         class="sidebar-button-style btn-8">
+        下載範例資料
+      </a>
+
+      <button id="downloadZip" class="sidebar-button-style btn-9">
+        下載全部結果（ZIP）
+      </button>
+    </div>
+
+    <!-- 檢定結果區 -->
+    <div id="blocksContainer"></div>
+
+    <!-- 回首頁 -->
+    <div class="back-button-container">
+      <a href="../statisticList.html" class="back-button btn-1">back</a>
+    </div>
+
+  </div>
+
+  <!-- 區塊模板 -->
+  <template id="blockTemplate">
+    <div class="block-card">
+      <button class="deleteBlock">✕</button>
+
+      <div class="upload-row">
+        <input type="file" class="fileInput" required />
+        <a class="downloadLink">下載結果</a>
+      </div>
+
+      <table>
+        <thead>
+          <tr class="resultHeader"></tr>
+        </thead>
+        <tbody class="resultTable">
+          <tr>
+            <td colspan="10" style="color:#999;">尚無結果</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </template>
+
+  <!-- 原有 JS 幾乎不動 -->
+  <script>
+    const blocksContainer = document.getElementById("blocksContainer");
+    const blockTemplate = document.getElementById("blockTemplate");
+    let blocks = [];
+
+    function addBlock() {
+      const clone = blockTemplate.content.cloneNode(true);
+      const block = clone.querySelector(".block-card");
+
+      const fileInput = block.querySelector(".fileInput");
+      const resultHeader = block.querySelector(".resultHeader");
+      const resultTable = block.querySelector(".resultTable");
+      const downloadLink = block.querySelector(".downloadLink");
+      const deleteBtn = block.querySelector(".deleteBlock");
+
+      deleteBtn.addEventListener("click", () => {
+        block.remove();
+        blocks = blocks.filter(b => b.block !== block);
+      });
+
+      blocks.push({ block, fileInput, resultHeader, resultTable, downloadLink, task_id: null });
+      blocksContainer.appendChild(block);
+    }
+
+    async function runAll() {
+      for (const block of blocks) {
+        const file = block.fileInput.files[0];
+        if (!file) continue;
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const res = await fetch("http://127.0.0.1:5000/stat/independentTtest/upload", {
+          method: "POST",
+          body: formData
+        });
+
+        const data = await res.json();
+        block.resultHeader.innerHTML = "";
+        block.resultTable.innerHTML = "";
+
+        if (data.error) {
+          block.resultTable.innerHTML =
+            `<tr><td colspan="10" style="color:red;">${data.error}</td></tr>`;
+          continue;
+        }
+
+        block.task_id = data.task_id;
+
+        data.columns.forEach(col => {
+          const th = document.createElement("th");
+          th.textContent = col;
+          block.resultHeader.appendChild(th);
+        });
+
+        data.data.forEach(row => {
+          const tr = document.createElement("tr");
+          data.columns.forEach(col => {
+            const td = document.createElement("td");
+            td.textContent = row[col];
+            tr.appendChild(td);
+          });
+          block.resultTable.appendChild(tr);
+        });
+
+        block.downloadLink.style.display = "inline-block";
+        block.downloadLink.href = `http://127.0.0.1:5000/stat/download/${block.task_id}`;
+      }
+    }
+
+    document.getElementById("addBlock").addEventListener("click", addBlock);
+    document.getElementById("runAll").addEventListener("click", runAll);
+
+    document.getElementById("downloadZip").addEventListener("click", async () => {
+      const taskIds = blocks.map(b => b.task_id).filter(Boolean);
+      if (taskIds.length === 0) return alert("尚無可下載結果");
+
+      const res = await fetch("http://127.0.0.1:5000/stat/download_zip", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(taskIds)
+      });
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "獨立T檢定.zip";
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    addBlock();
+  </script>
+</body>
+</html>
