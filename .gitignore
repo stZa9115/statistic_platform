@@ -15,3 +15,5 @@ backend/results/
 backend/check/*
 
 !backend/check/.gitkeep
+
+struct.txt
