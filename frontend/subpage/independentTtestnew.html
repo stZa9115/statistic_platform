@@ -93,7 +93,7 @@
       <button id="addBlock" class="sidebar-button-style btn-6">＋ 新增檢定</button>
       <button id="runAll" class="sidebar-button-style btn-7">▶ 一鍵執行全部</button>
 
-      <a href="../sample/t_test_data.xlsx"
+      <a href="../sample/independent_t_test_example.xlsx"
          download
          class="sidebar-button-style btn-8">
         下載範例資料
@@ -170,7 +170,7 @@
         const formData = new FormData();
         formData.append("file", file);
 
-        const res = await fetch("http://127.0.0.1:5000/stat/independentTtest/upload", {
+        const res = await fetch("http://140.116.245.154:5679/stat/independentTtest/upload", {
           method: "POST",
           body: formData
         });
@@ -204,7 +204,7 @@
         });
 
         block.downloadLink.style.display = "inline-block";
-        block.downloadLink.href = `http://127.0.0.1:5000/stat/download/${block.task_id}`;
+        block.downloadLink.href = `http://140.116.245.154:5679/stat/download/${block.task_id}`;
       }
     }
 
@@ -215,7 +215,7 @@
       const taskIds = blocks.map(b => b.task_id).filter(Boolean);
       if (taskIds.length === 0) return alert("尚無可下載結果");
 
-      const res = await fetch("http://127.0.0.1:5000/stat/download_zip", {
+      const res = await fetch("http://140.116.245.154:5679/stat/download_zip", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(taskIds)
