@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <title>ANOVA</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../config.js"></script>
+
 </head>
 <body class="bg-yellow-100 p-6">
   <div class="max-w-5xl mx-auto">
@@ -51,6 +53,8 @@
   <script>
     const blocksContainer = document.getElementById("blocksContainer");
     const blockTemplate = document.getElementById("blockTemplate");
+    const { BASE_URL, ENDPOINTS } = window.API_CONFIG;
+
     let blocks = [];
 
     function addBlock() {
@@ -88,7 +92,7 @@
         //   method: "POST",
         //   body: formData
         // });
-        const res = await fetch("http://140.116.245.154:5679/stat/anova/upload", {   // ← 你的後端 API
+        const res = await fetch(`${BASE_URL}${ENDPOINTS.anova}`, {   // ← 你的後端 API
           method: "POST",
           body: formData
         });
@@ -128,7 +132,7 @@
         // 設定下載連結
         block.downloadLink.classList.remove("hidden");
         // block.downloadLink.href = `http://140.116.245.154:5679/independentTtest/download/${block.task_id}`;
-        block.downloadLink.href = `http://140.116.245.154:5679/stat/download/${block.task_id}`;
+        block.downloadLink.href = `${BASE_URL}${download}${block.task_id}`;
       }
     }
 
@@ -146,7 +150,7 @@
       }
 
       const res = await fetch(
-        "http://140.116.245.154:5679/stat/download_zip",
+        `${BASE_URL}${ENDPOINTS.downloadZip}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

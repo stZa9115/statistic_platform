@@ -16,4 +16,5 @@ backend/check/*
 
 !backend/check/.gitkeep
 
+doctorHsu
 struct.txt

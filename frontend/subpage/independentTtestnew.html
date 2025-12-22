@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="../config.js"></script>
+
   <title>獨立樣本 T 檢定</title>
 
   <!-- 使用你既有的整站樣式 -->
@@ -141,6 +143,8 @@
   <script>
     const blocksContainer = document.getElementById("blocksContainer");
     const blockTemplate = document.getElementById("blockTemplate");
+    const { BASE_URL, ENDPOINTS } = window.API_CONFIG;
+
     let blocks = [];
 
     function addBlock() {
@@ -170,7 +174,7 @@
         const formData = new FormData();
         formData.append("file", file);
 
-        const res = await fetch("http://140.116.245.154:5679/stat/independentTtest/upload", {
+        const res = await fetch(`${BASE_URL}${ENDPOINTS.independentTtest}`, {
           method: "POST",
           body: formData
         });
@@ -204,7 +208,7 @@
         });
 
         block.downloadLink.style.display = "inline-block";
-        block.downloadLink.href = `http://140.116.245.154:5679/stat/download/${block.task_id}`;
+        block.downloadLink.href = `${BASE_URL}${download}${block.task_id}`;
       }
     }
 
@@ -215,7 +219,7 @@
       const taskIds = blocks.map(b => b.task_id).filter(Boolean);
       if (taskIds.length === 0) return alert("尚無可下載結果");
 
-      const res = await fetch("http://140.116.245.154:5679/stat/download_zip", {
+      const res = await fetch(`${BASE_URL}${ENDPOINTS.downloadZip}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(taskIds)
