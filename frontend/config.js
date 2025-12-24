@@ -9,9 +9,9 @@ window.API_CONFIG = {
 
   // 你也可以順便集中所有 endpoint
   ENDPOINTS: {
-    independentTtest: "/stat/independentTtest/upload",
-    pairedTtest: "/stat/pairedTtest/upload",
-    anova: "/stat/anova/upload",
+    independentTtest: "/ttest/independentTtest/upload",
+    pairedTtest: "/ttest/pairedTtest/upload",
+    anova: "/anova/anova/upload",
     download: "/stat/download",
     downloadZip: "/stat/download_zip"
   }

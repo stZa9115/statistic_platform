@@ -208,8 +208,7 @@
         });
 
         block.downloadLink.style.display = "inline-block";
-        block.downloadLink.href = `${BASE_URL}${download}${block.task_id}`;
-      }
+        block.downloadLink.href = `${BASE_URL}${ENDPOINTS.download}${block.task_id}`;      }
     }
 
     document.getElementById("addBlock").addEventListener("click", addBlock);

@@ -15,7 +15,7 @@ from zipfile import ZipFile
 from tempfile import NamedTemporaryFile
 
 from stat_code import REGISTRY
-from costomTools.santize import sanitize_filename
+from costomTools import sanitize_filename, write_anova_postTest
 
 from stat_code.independentTtest import t_test
 RESULT_DIR = "results"
@@ -50,8 +50,8 @@ def cleanup_worker():
                     print(f"[CLEANUP] removed {fname}")
                 except Exception as e:
                     print("[CLEANUP ERROR]", e)
-        time.sleep(10)
-        # time.sleep(300)  
+        # time.sleep(10)
+        time.sleep(300)  
 
 @app.on_event("startup")
 def start_cleanup():
@@ -60,8 +60,8 @@ def start_cleanup():
     print('REGISTRY:', REGISTRY.keys())
 
 
-@app.post("/stat/{test_name}/upload")
-async def upload_new(test_name: str, file:UploadFile = File(...)):
+@app.post("/ttest/{test_name}/upload")
+async def upload_tTest(test_name: str, file:UploadFile = File(...)):
     if test_name not in REGISTRY:
         raise HTTPException(status_code=404, detail="未知的統計檢定")
     test = REGISTRY[test_name]
@@ -106,6 +106,72 @@ async def upload_new(test_name: str, file:UploadFile = File(...)):
         "data": result_df.to_dict(orient="records")
     }
 
+@app.post("/anova/{test_name}/upload")
+async def upload_anova(test_name: str, file:UploadFile = File(...)):
+    if test_name not in REGISTRY:
+        raise HTTPException(status_code=404, detail ='未知的統計檢定')
+    
+    test = REGISTRY[test_name]
+    task_id = str(uuid.uuid4())
+
+    result_path = os.path.join(RESULT_DIR,f'{task_id}.xlsx')
+    meta_path = os.path.join(RESULT_DIR, f'{task_id}.meta')
+
+    original_name = sanitize_filename(
+        os.path.splitext(file.filename)[0], max_length=30
+    )
+
+    with NamedTemporaryFile(delete=False, suffix='xlsx') as tmp:
+        shutil.copyfileobj(file.file, tmp)
+        tmp_path = tmp.name
+
+    try:
+        df = pd.read_excel(tmp_path)
+        result = test.run(df)
+
+        sections = []
+
+        pre_df = pd.DataFrame(result['pretest']).fillna("")
+        pre_df.to_excel(result_path, index=False)
+        
+        pre_df.to_excel('./check/pretest.xlsx', index=False) #debug
+
+        sections.append({
+            "title": f"{test.display_name}前測結果",
+            'columns': list(pre_df.columns),
+            'data': list(pre_df.to_dict(orient='records'))
+        })
+
+        if result['post']:
+            post_df = pd.DataFrame(result['posttest']).fillna("")
+            sections.append({
+                "title": f"{test.display_name}後測結果",
+                "columns": list(post_df.columns),
+                "data": list(post_df.to_dict(orient='records'))
+            })
+            post_df.to_excel('./check/posttest.xlsx', index=False) #debug
+            write_anova_postTest(post_df, result_path)
+        
+        
+        with open(meta_path, 'w', encoding='utf-8') as f:
+            json.dump(
+                {
+                    "original_name":original_name,
+                    "test_name":test.display_name
+                },
+                f,
+                ensure_ascii=False
+            )
+
+        
+    finally:
+        os.remove(tmp_path)
+
+    return{
+        "task_id":task_id,
+        "test": test.display_name,
+        "sections": sections
+    }
 
 @app.get("/stat/download/{task_id}")
 def download_stat(task_id: str):
