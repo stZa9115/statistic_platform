@@ -1,0 +1,18 @@
+services:
+  backend:
+    build: ./backend
+    container_name: stat_backend
+    restart: always
+    ports:
+      - "5581:5000"
+    volumes:
+      - ./backend_results:/app/results
+
+  frontend:
+    build: ./frontend
+    container_name: stat_frontend
+    restart: always
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
