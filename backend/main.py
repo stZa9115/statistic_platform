@@ -148,7 +148,7 @@ async def upload_anova(test_name: str, file:UploadFile = File(...)):
         if result['post']:
             post_df = pd.DataFrame(result['posttest']).fillna("")
             sections.append({
-                "title": f"{test.display_name}後測結果",
+                "title": f"事後比較",
                 "columns": list(post_df.columns),
                 "data": list(post_df.to_dict(orient='records'))
             })

@@ -1,0 +1,22 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+
+# Virtual environments
+backend/.venv
+
+backend/test.py
+backend/results/
+backend/check
+backend_results/
+
+struct.txt
+
+.git/
+.gitIgnore
+
