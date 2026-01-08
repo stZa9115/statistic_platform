@@ -6,13 +6,12 @@ dist/
 wheels/
 *.egg-info
 
-
 # Virtual environments
-backend/.venv
+.venv
 
-backend/test.py
-backend/results/
-backend/check
+test.py
+results/
+check
 backend_results/
 
 struct.txt
