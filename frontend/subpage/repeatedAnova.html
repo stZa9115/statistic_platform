@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>重複測量變異數分析</title>
+  <link rel="stylesheet" href="../style.css">
+  <script src="../config.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="stat-repeated-anova">
+  <div class="container">
+    
+    <div class="back-button-container">
+      <a href="../statisticList.html" class="back-button">首頁</a>
+    </div>
+
+    <h1 class="title">重複測量變異數分析</h1>
+
+    <div class="main-content-wrapper" style="min-height: 80px;"> <div class="text-content">
+        </div>
+
+      <div class="sidebar-button-container" style="margin-top: 0;"> <a href="../sample/repeated_anova_example.xlsx" download class="sidebar-button-style">
+          下載範例檔案
+        </a>
+      </div>
+    </div>
+
+    <hr style="margin-top: 30px; margin-bottom: 30px;">
+
+    <div style="margin-bottom: 20px; display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
+      <button id="addBlock" class="sidebar-button-style" style="cursor: pointer; border: none; width: auto; min-width: 150px;">
+        + 新增檢定
+      </button>
+      
+      <button id="runAll" class="sidebar-button-style" style="cursor: pointer; border: none; width: auto; min-width: 150px;">
+        ▶ 執行全部
+      </button>
+
+      <button id="downloadZip" class="sidebar-button-style" style="cursor: pointer; border: none; width: auto; min-width: 150px;">
+        下載全部結果
+      </button>
+    </div>
+
+    <div id="blocksContainer"></div>
+  </div>
+
+  <template id="blockTemplate">
+    <div class="block-container bg-white shadow-lg rounded-2xl p-6 mb-6 border border-gray-300 relative">
+      
+      <button type="button" class="deleteBlock absolute top-2 right-2 bg-red-500 text-white w-8 h-8 flex items-center justify-center rounded-full hover:bg-red-700 font-bold text-lg">
+        ✕
+      </button>
+
+      <form class="uploadForm flex items-center space-x-4 mb-4">
+        <input type="file" class="fileInput border p-2 rounded cursor-pointer" required>
+        <a class="downloadLink hidden sidebar-button-style" style="padding: 8px 15px; font-size: 0.9em; width: auto; height: auto; line-height: normal;">
+          下載結果
+        </a>
+      </form>
+
+      <div class="overflow-x-auto">
+        <table class="table-auto border-collapse border border-gray-400 w-full text-center text-sm">
+          <tbody class="resultTable">
+            <tr>
+              <td class="p-4 text-gray-500">
+                尚未執行檢定
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </template>
+
+  <script>
+    const blocksContainer = document.getElementById("blocksContainer");
+    const blockTemplate = document.getElementById("blockTemplate");
+    const { BASE_URL, ENDPOINTS } = window.API_CONFIG;
+
+    let blocks = [];
+
+    // 新增區塊
+    function addBlock() {
+      const clone = blockTemplate.content.cloneNode(true);
+      const blockDiv = clone.querySelector("div");
+
+      const fileInput = blockDiv.querySelector(".fileInput");
+      const resultTable = blockDiv.querySelector(".resultTable");
+      const downloadLink = blockDiv.querySelector(".downloadLink");
+      const deleteBtn = blockDiv.querySelector(".deleteBlock");
+
+      deleteBtn.addEventListener("click", () => {
+        blockDiv.remove();
+        blocks = blocks.filter(b => b.blockDiv !== blockDiv);
+      });
+
+      blocks.push({
+        blockDiv,
+        fileInput,
+        resultTable,
+        downloadLink,
+        task_id: null
+      });
+
+      blocksContainer.appendChild(blockDiv);
+    }
+
+    // 執行全部
+    async function runAll() {
+      for (const block of blocks) {
+        const file = block.fileInput.files[0];
+        const table = block.resultTable;
+
+        table.innerHTML = ""; // 清空舊結果
+
+        if (!file) {
+          table.innerHTML = `
+            <tr>
+              <td class="p-3 text-yellow-600">未上傳檔案，已略過</td>
+            </tr>`;
+          continue;
+        }
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+          // 修改 API 端點為 repeatedAnova
+          const res = await fetch(`${BASE_URL}${ENDPOINTS.repeatedAnova}`, {
+            method: "POST",
+            body: formData
+          });
+
+          const data = await res.json();
+          console.log("Repeated ANOVA response:", data);
+
+          if (data.error) {
+            table.innerHTML = `
+              <tr>
+                <td class="p-3 text-red-500">${data.error}</td>
+              </tr>`;
+            continue;
+          }
+
+          block.task_id = data.task_id;
+
+          // ================= 結果渲染邏輯 (使用 Sections 結構) =================
+          if (data.sections && Array.isArray(data.sections)) {
+            data.sections.forEach(section => {
+              
+              // 1. Section Title (區塊標題)
+              if (section.title) {
+                const titleRow = document.createElement("tr");
+                // 使用粉色系標題背景
+                titleRow.innerHTML = `
+                  <td colspan="${section.columns.length}"
+                      class="bg-pink-200 font-bold text-left px-3 py-2 text-pink-900">
+                    ${section.title}
+                  </td>`;
+                table.appendChild(titleRow);
+              }
+
+              // 2. Header Row (欄位名稱)
+              const headerRow = document.createElement("tr");
+              section.columns.forEach(col => {
+                const th = document.createElement("th");
+                th.className = "border border-gray-400 px-2 py-1 bg-gray-100";
+                th.textContent = col;
+                headerRow.appendChild(th);
+              });
+              table.appendChild(headerRow);
+
+              // 3. Data Rows (數據內容)
+              section.data.forEach(row => {
+                const tr = document.createElement("tr");
+                section.columns.forEach(col => {
+                  const td = document.createElement("td");
+                  td.className = "border border-gray-400 px-2 py-1";
+                  // 安全顯示資料 (處理 null/undefined)
+                  td.textContent = (row[col] !== null && row[col] !== undefined) ? row[col] : "";
+                  tr.appendChild(td);
+                });
+                table.appendChild(tr);
+              });
+            });
+          } else {
+             table.innerHTML = `<tr><td class="p-3 text-red-500">回傳資料格式錯誤 (Missing sections)</td></tr>`;
+          }
+
+          // 顯示個別下載按鈕
+          block.downloadLink.classList.remove("hidden");
+          block.downloadLink.href = `${BASE_URL}${ENDPOINTS.download}${block.task_id}`;
+
+        } catch (err) {
+          console.error(err);
+          table.innerHTML = `<tr><td class="p-3 text-red-500">伺服器錯誤</td></tr>`;
+        }
+      }
+    }
+
+    // 下載全部 ZIP
+    document.getElementById("downloadZip").addEventListener("click", async () => {
+      const taskIds = blocks.map(b => b.task_id).filter(id => id !== null);
+
+      if (taskIds.length === 0) {
+        alert("尚無可下載的結果");
+        return;
+      }
+
+      try {
+        const res = await fetch(`${BASE_URL}${ENDPOINTS.downloadZip}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(taskIds)
+        });
+
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "Repeated_ANOVA.zip";
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error(err);
+        alert("下載失敗");
+      }
+    });
+
+    // 初始化
+    addBlock();
+    document.getElementById("addBlock").addEventListener("click", addBlock);
+    document.getElementById("runAll").addEventListener("click", runAll);
+  </script>
+</body>
+</html>

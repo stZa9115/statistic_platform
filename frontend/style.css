@@ -256,7 +256,24 @@ body.stat-anova {
   --stat-accent: #9c6fb6;
   --stat-accent-hover: #7048a8;
 }
+/* =========================
+   重複測量變異數分析 (Repeated Measures ANOVA)
+   配色主題：粉紅/玫瑰色 (Rose/Pink)
+   ========================= */
 
+body.stat-repeated_anova {
+  --stat-bg: #fff0f5;         /* Lavender Blush 背景 */
+  --stat-title: #ffc1e3;      /* 標題背景 */
+  --stat-accent: #ff80ab;     /* 按鈕/強調色 */
+  --stat-accent-hover: #f06292; /* 按鈕 Hover */
+}
+
+/* 列表頁按鈕 hover 效果 (假設這是第 5 個或新增的按鈕) */
+/* 若您在首頁新增了對應按鈕，請確認其 class 對應名稱 */
+body.stat-list .small-buttons .btn-repeated:hover {
+  background-color: #ff80ab;
+  transform: translateY(-2px);
+}
 body[class^="stat-"] {
   background-color: var(--stat-bg);
 }
