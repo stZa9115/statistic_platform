@@ -94,7 +94,7 @@
 <body class="stat-repeated_anova">
   <div class="container">
 
-    <div class="title">重複測量變異數分析</div>
+    <div class="title">Repeated ANOVA</div>
 
     <div class="action-buttons">
       <button id="addBlock" class="sidebar-button-style btn-6">＋ 新增檢定</button>
@@ -178,7 +178,7 @@
 
         const formData = new FormData();
         formData.append("file", file);
-
+        console.log(`${BASE_URL}${ENDPOINTS.repeatedAnova}`);
         // 使用 Repeated ANOVA 的端點
         const res = await fetch(`${BASE_URL}${ENDPOINTS.repeatedAnova}`, {
           method: "POST",

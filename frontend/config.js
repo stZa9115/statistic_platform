@@ -12,6 +12,7 @@ window.API_CONFIG = {
     independentTtest: "/ttest/independentTtest/upload",
     pairedTtest: "/ttest/pairedTtest/upload",
     anova: "/anova/anova/upload",
+    repeatedAnova :"/anova/repeatedAnova/upload",
     download: "/stat/download/",
     downloadZip: "/stat/download_zip"
   }
