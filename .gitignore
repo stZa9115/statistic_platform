@@ -6,7 +6,6 @@ dist/
 wheels/
 *.egg-info
 
-
 # Virtual environments
 backend/.venv
 
@@ -16,6 +15,9 @@ backend/check/*
 backend_results/
 
 !backend/check/.gitkeep
+
+
+frontend/.vscode/
 
 doctorHsu
 struct.txt

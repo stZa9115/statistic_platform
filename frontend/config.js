@@ -1,5 +1,5 @@
 // === 全站後端 API 設定 ===
-laptop = false;
+laptop = true;
 
 // 開發 / 測試 / 臨時展示
 window.API_CONFIG = {
