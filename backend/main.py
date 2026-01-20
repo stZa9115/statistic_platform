@@ -16,6 +16,7 @@ from tempfile import NamedTemporaryFile
 
 from stat_code import REGISTRY
 from costomTools import sanitize_filename, write_anova_postTest
+from survival_router import router as survival_router
 
 from stat_code.independentTtest import t_test
 RESULT_DIR = "results"
@@ -62,6 +63,8 @@ def start_cleanup():
     t = threading.Thread(target=cleanup_worker, daemon=True)
     t.start()
     print('REGISTRY:', REGISTRY.keys())
+
+app.include_router(survival_router)
 
 
 @app.post("/ttest/{test_name}/upload")
