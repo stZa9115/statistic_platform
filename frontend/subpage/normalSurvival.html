@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="../config.js"></script>
+
+  <title>存活分析 (Survival Analysis)</title>
+
+  <link rel="stylesheet" href="../style.css" />
+
+  <style>
+    /* 沿用原本的樣式 */
+    .action-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: center;
+      margin-bottom: 40px;
+    }
+
+    .action-buttons button,
+    .action-buttons a {
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .block-card {
+      background-color: white;
+      border-radius: 25px;
+      padding: 25px;
+      margin-bottom: 40px;
+      position: relative;
+    }
+
+    .deleteBlock {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      background-color: #ffb5a7;
+      border: none;
+      border-radius: 50%;
+      width: 35px;
+      height: 35px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    /* 表格樣式 */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      font-size: 0.95em;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+    }
+
+    th {
+      background-color: #eee4e1;
+    }
+
+    .section-title {
+      background-color: #ffe4e1;
+      font-weight: bold;
+      text-align: left;
+      padding-left: 15px;
+      color: #333;
+    }
+
+    .upload-row {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 15px;
+    }
+
+    .downloadLink {
+      background-color: #ff80ab;
+      padding: 10px 20px;
+      border-radius: 12px;
+      text-decoration: none;
+      color: black;
+      display: none; /* 預設隱藏 */
+    }
+
+    /* === 新增：存活分析專用樣式 === */
+    .analysis-container {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        margin-top: 20px;
+    }
+
+    .chart-box {
+        text-align: center;
+        border: 1px solid #eee;
+        padding: 10px;
+        border-radius: 10px;
+        background: #f9f9f9;
+    }
+
+    .chart-box img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 5px;
+    }
+
+    .report-box {
+        background: #f4f4f4;
+        padding: 15px;
+        border-radius: 10px;
+        border-left: 5px solid #ff80ab;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .report-box h4 {
+        margin-top: 0;
+        color: #333;
+    }
+
+    .report-text {
+        white-space: pre-wrap; /* 保留換行格式 */
+        font-family: monospace;
+        color: #444;
+        font-size: 0.9em;
+    }
+  </style>
+</head>
+
+<body class="stat-survival"> <div class="container">
+
+    <div class="title">Survival Analysis</div>
+
+    <div class="action-buttons">
+      <button id="addBlock" class="sidebar-button-style btn-6">＋ 新增檢定</button>
+      <button id="runAll" class="sidebar-button-style btn-7">▶ 一鍵執行全部</button>
+
+      <a href="../sample/survival_example.xlsx"
+         download
+         class="sidebar-button-style btn-8">
+        下載範例資料
+      </a>
+
+      <button id="downloadZip" class="sidebar-button-style btn-9">
+        下載全部結果（ZIP）
+      </button>
+    </div>
+
+    <div id="blocksContainer"></div>
+
+    <div class="back-button-container">
+      <a href="../statisticList.html" class="back-button btn-1">back</a>
+    </div>
+
+  </div>
+
+  <template id="blockTemplate">
+    <div class="block-card">
+      <button class="deleteBlock">✕</button>
+
+      <div class="upload-row">
+        <input type="file" class="fileInput" accept=".xlsx, .xls" required />
+        <a class="downloadLink" target="_blank">下載結果 (ZIP)</a>
+      </div>
+
+      <div class="upload-row">
+        <input type="text" class="blockTextInput" placeholder="Optional note" />
+      </div>
+
+      <div class="analysis-result" style="display: none;">
+        
+        <div class="chart-box">
+            <h4>Kaplan-Meier Curve</h4>
+            <img class="resultImage" src="" alt="Survival Plot" />
+        </div>
+
+        <table>
+            <tbody class="resultTable"></tbody>
+        </table>
+
+        <div class="report-box">
+            <h4>Check Assumptions Report</h4>
+            <pre class="report-text"></pre>
+        </div>
+
+      </div>
+      
+      <div class="status-msg" style="color:#999; margin-top:20px; text-align:center;">尚無結果</div>
+
+    </div>
+  </template>
+
+  <script>
+    const blocksContainer = document.getElementById("blocksContainer");
+    const blockTemplate = document.getElementById("blockTemplate");
+    const { BASE_URL } = window.API_CONFIG; // 假設 config.js 結構相同
+
+    // 定義 Survival 專用的 Endpoints
+    const SURVIVAL_ENDPOINT = "/survival/survival/upload"; 
+    const SURVIVAL_DOWNLOAD_ZIP = "/survival/download_zip"; // 批次下載
+    const SURVIVAL_DOWNLOAD_SINGLE = "/survival/download";  // 單次下載
+    const SURVIVAL_IMAGE = "/survival/image";               // 圖片來源
+
+    let blocks = [];
+
+    function addBlock() {
+      const clone = blockTemplate.content.cloneNode(true);
+      const blockEl = clone.querySelector(".block-card");
+
+      const fileInput = blockEl.querySelector(".fileInput");
+      const downloadLink = blockEl.querySelector(".downloadLink");
+      const deleteBtn = blockEl.querySelector(".deleteBlock");
+      
+      // 結果顯示區塊
+      const analysisResult = blockEl.querySelector(".analysis-result");
+      const resultImage = blockEl.querySelector(".resultImage");
+      const resultTable = blockEl.querySelector(".resultTable");
+      const reportText = blockEl.querySelector(".report-text");
+      const statusMsg = blockEl.querySelector(".status-msg");
+
+      deleteBtn.addEventListener("click", () => {
+        blockEl.remove();
+        blocks = blocks.filter(b => b.block !== blockEl);
+      });
+
+      blocks.push({ 
+          block: blockEl, 
+          fileInput, 
+          downloadLink, 
+          analysisResult,
+          resultImage, 
+          resultTable, 
+          reportText, 
+          statusMsg,
+          task_id: null 
+      });
+      
+      blocksContainer.appendChild(blockEl);
+    }
+
+    async function runAll() {
+      for (const item of blocks) {
+        const file = item.fileInput.files[0];
+        
+        // 重置狀態
+        item.analysisResult.style.display = "none";
+        item.resultTable.innerHTML = "";
+        item.reportText.textContent = "";
+        item.resultImage.src = "";
+        item.downloadLink.style.display = "none";
+
+        if (!file) {
+          item.statusMsg.textContent = "尚未上傳檔案";
+          item.statusMsg.style.display = "block";
+          continue;
+        }
+
+        item.statusMsg.textContent = "分析中...";
+        item.statusMsg.style.display = "block";
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+            const res = await fetch(`${BASE_URL}${SURVIVAL_ENDPOINT}`, {
+                method: "POST",
+                body: formData
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.detail || "分析失敗");
+            }
+
+            item.task_id = data.task_id;
+
+            // === 1. 設定圖片 ===
+            // 加上時間戳記避免瀏覽器快取舊圖
+            item.resultImage.src = `${BASE_URL}${SURVIVAL_IMAGE}/${data.task_id}?t=${new Date().getTime()}`;
+
+            // === 2. 設定文字報告 ===
+            item.reportText.textContent = data.report_text || "無報告內容";
+
+            // === 3. 設定表格 (Sections) ===
+            if (data.sections && Array.isArray(data.sections)) {
+                data.sections.forEach(section => {
+                    // Title
+                    const titleRow = document.createElement("tr");
+                    const titleCell = document.createElement("td");
+                    const colCount = section.columns ? section.columns.length : 5;
+                    titleCell.colSpan = colCount;
+                    titleCell.textContent = section.title;
+                    titleCell.className = "section-title";
+                    titleRow.appendChild(titleCell);
+                    item.resultTable.appendChild(titleRow);
+
+                    // Header
+                    if (section.columns) {
+                        const headerRow = document.createElement("tr");
+                        section.columns.forEach(col => {
+                            const th = document.createElement("th");
+                            th.textContent = col;
+                            headerRow.appendChild(th);
+                        });
+                        item.resultTable.appendChild(headerRow);
+                    }
+
+                    // Data
+                    if (section.data) {
+                        section.data.forEach(row => {
+                            const tr = document.createElement("tr");
+                            section.columns.forEach(col => {
+                                const td = document.createElement("td");
+                                td.textContent = row[col] !== undefined ? row[col] : "";
+                                tr.appendChild(td);
+                            });
+                            item.resultTable.appendChild(tr);
+                        });
+                    }
+                });
+            }
+
+            // 顯示結果區域
+            item.statusMsg.style.display = "none";
+            item.analysisResult.style.display = "block";
+
+            // === 設定單一下載按鈕 (下載該任務的 ZIP) ===
+            item.downloadLink.style.display = "inline-block";
+            item.downloadLink.href = `${BASE_URL}${SURVIVAL_DOWNLOAD_SINGLE}/${item.task_id}`;
+
+        } catch (err) {
+            item.statusMsg.style.color = "red";
+            item.statusMsg.textContent = err.message;
+        }
+      }
+    }
+
+    document.getElementById("addBlock").addEventListener("click", addBlock);
+    document.getElementById("runAll").addEventListener("click", runAll);
+
+    // 下載全部結果 (ZIP 包 ZIP 或 Folder)
+    document.getElementById("downloadZip").addEventListener("click", async () => {
+      const taskIds = blocks.map(b => b.task_id).filter(Boolean);
+      if (taskIds.length === 0) return alert("尚無可下載結果");
+
+      // 呼叫後端批次下載 API
+      const res = await fetch(`${BASE_URL}${SURVIVAL_DOWNLOAD_ZIP}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(taskIds)
+      });
+
+      if (!res.ok) {
+          return alert("下載失敗");
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "Survival_Analysis_Results.zip";
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // 初始化一個區塊
+    addBlock();
+  </script>
+</body>
+</html>

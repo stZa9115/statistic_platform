@@ -249,6 +249,18 @@ body.stat-paired {
   --stat-accent-hover: #364fc7;
 }
 
+/* =========================
+   存活分析 (Survival Analysis)
+   配色主題：生命綠 / 橄欖綠 (Vitality Olive)
+   ========================= */
+
+body.stat-survival {
+  --stat-bg: #f6f8f1;           /* 極淺的茶綠色背景，護眼且清爽 */
+  --stat-title: #e4eac2;        /* 標題背景，柔和的淺橄欖色 */
+  --stat-accent: #bed06f;       /* 強調色 (對應 btn-7)，鮮明的橄欖綠 */
+  --stat-accent-hover: #a3b55a; /* Hover 時的深橄欖綠 */
+}
+
 /* 卡方 */
 body.stat-anova {
   --stat-bg: #f3eef6;
