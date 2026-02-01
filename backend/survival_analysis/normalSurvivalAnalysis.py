@@ -81,8 +81,8 @@ def analyze_survival_logic(df: pd.DataFrame, group_col: str = None):
             logrank_data = {
                 "Test": ["Multivariate Log-Rank"],
                 "Group Column": [group_col],
-                "test_statistic": [results.test_statistic],
-                "p-value": [results.p_value],
+                "test_statistic": [round(results.test_statistic,3)],
+                "p-value": [round(results.p_value,3)],
                 "Significant (p<0.05)": ["Yes" if results.p_value < 0.05 else "No"]
             }
             logrank_df = pd.DataFrame(logrank_data)
@@ -111,7 +111,12 @@ def analyze_survival_logic(df: pd.DataFrame, group_col: str = None):
         stats_result = proportional_hazard_test(cph, df_encoded, time_transform='rank')
         cox_df = stats_result.summary.reset_index()
         cox_df.rename(columns={'index': 'variable'}, inplace=True)
-        
+        print(cox_df.columns)
+        for c in cox_df.columns[1:]:
+            cox_df[c] = cox_df[c].round(3)
+            for idx, val in enumerate(cox_df[c]):
+                if c == 'p' and val < 0.001:
+                    cox_df.at[idx, c] = f"< .001"
         # 5. 提取文字報告
         f = io.StringIO()
         with contextlib.redirect_stdout(f):

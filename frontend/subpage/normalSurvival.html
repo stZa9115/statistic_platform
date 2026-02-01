@@ -292,8 +292,13 @@
             item.resultImage.src = `${BASE_URL}${SURVIVAL_IMAGE}/${data.task_id}?t=${new Date().getTime()}`;
 
             // 2. 設定文字報告
-            item.reportText.textContent = data.report_text || "無報告內容";
-
+            // item.reportText.textContent = data.report_text || "無報告內容";
+            if (data.report_text) {
+                item.reportText.textContent = data.report_text;
+                item.reportText.parentElement.style.display = "block"; // 顯示 .report-box
+            } else {
+                item.reportText.parentElement.style.display = "none";  // 隱藏 .report-box
+            }
             // 3. 設定表格 (支援多個 Sections)
             if (data.sections && Array.isArray(data.sections)) {
                 data.sections.forEach(section => {

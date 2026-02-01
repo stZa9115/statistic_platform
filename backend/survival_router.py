@@ -117,7 +117,7 @@ async def upload_survival_analysis(
     return {
         "task_id": task_id,
         "test": test.display_name,
-        "report_text": result['report_text'],
+        # "report_text": result['report_text'],
         "sections": sections 
     }
 
