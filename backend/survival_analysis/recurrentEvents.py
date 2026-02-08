@@ -96,6 +96,7 @@ class RecurrentSurvivalAnalysis(svTest):
         print("Saving figure to test.png")
         plt.savefig('test.png')
 
+
         # 4. 封裝回傳格式
         return {
             "fig": fig,
@@ -116,19 +117,22 @@ class RecurrentSurvivalAnalysis(svTest):
                     "data": stats_df.to_dict(orient='records'),
                     "layout": "half"
                 },
-                # 第二部分：係數表 Part 1 (改為 Full，強制佔滿整行)
+                # --- 修改處：將係數表 Part 1 與 Part 2 合併為一個 Section ---
                 {
-                    "title": "Model Coefficients (Part 1)",
-                    "columns": cols1,
-                    "data": coef_df1.fillna("").to_dict(orient='records'),
-                    "layout": "full"  # <--- 修改這裡：由 'half' 改為 'full'
-                },
-                # 第三部分：係數表 Part 2 (改為 Full，強制佔滿整行)
-                {
-                    "title": "Model Coefficients (Part 2)",
-                    "columns": cols2,
-                    "data": coef_df2.fillna("").to_dict(orient='records'),
-                    "layout": "full"  # <--- 修改這裡：由 'half' 改為 'full'
+                    "title": "Model Coefficients", # 主標題
+                    "layout": "full",              # 強制佔滿整行
+                    "tables": [                    # 新增 tables 陣列，包含上下兩表
+                        {
+                            "sub_title": "Part 1: Coefficients & SE",
+                            "columns": cols1,
+                            "data": coef_df1.fillna("").to_dict(orient='records')
+                        },
+                        {
+                            "sub_title": "Part 2: Significance & CI",
+                            "columns": cols2,
+                            "data": coef_df2.fillna("").to_dict(orient='records')
+                        }
+                    ]
                 }
             ]
         }

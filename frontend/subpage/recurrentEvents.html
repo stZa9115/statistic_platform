@@ -284,7 +284,40 @@
       
       blocksContainer.appendChild(blockEl);
     }
+    function createTableDOM(columns, data) {
+        const table = document.createElement("table");
+        const thead = document.createElement("thead");
+        const tbody = document.createElement("tbody");
 
+        // 表頭
+        if (columns) {
+            const tr = document.createElement("tr");
+            columns.forEach(col => {
+                const th = document.createElement("th");
+                th.textContent = col;
+                tr.appendChild(th);
+            });
+            thead.appendChild(tr);
+        }
+
+        // 內容
+        if (data) {
+            data.forEach(row => {
+                const tr = document.createElement("tr");
+                columns.forEach(col => {
+                    const td = document.createElement("td");
+                    let val = row[col];
+                    if (typeof val === 'number') val = val.toFixed(3);
+                    td.textContent = (val === null || val === undefined) ? "" : val;
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+        }
+        table.appendChild(thead);
+        table.appendChild(tbody);
+        return table;
+    }
     async function runAll() {
       for (const item of blocks) {
         const file = item.fileInput.files[0];
@@ -334,61 +367,56 @@
             }
 
             // 3. 渲染多個結果表格 (Coefficients, Model Stats, Study Info)
+            // 3. 渲染結果表格 (修改後的邏輯)
             if (data.sections && Array.isArray(data.sections)) {
                 data.sections.forEach(section => {
                     // 1. 建立外層 Wrapper
                     const wrapper = document.createElement("div");
                     wrapper.className = "table-wrapper";
                     
-                    // 如果後端有標記 full，或是欄位很多(例如係數表)，強制滿寬
-                    // 修改後的代碼：
-                    // 只有當 layout 明確設為 full，或者沒有設定 layout 但欄位超過 6 個時，才強制滿版
+                    // 判斷 Layout 是否全寬
                     if (section.layout === 'full') {
                         wrapper.classList.add("full-width");
                     } else if (!section.layout && section.columns && section.columns.length > 5) {
                         wrapper.classList.add("full-width");
                     }
-                    // 若 layout 為 'half'，即使欄位有 4-5 個，也不會加上 full-width，從而允許並排
 
-                    // 2. 建立標題
+                    // 2. 建立主標題
                     const title = document.createElement("h4");
                     title.textContent = section.title;
                     wrapper.appendChild(title);
 
-                    // 3. 建立表格
-                    const table = document.createElement("table");
-                    const thead = document.createElement("thead");
-                    const tbody = document.createElement("tbody");
-
-                    // 表頭
-                    if (section.columns) {
-                        const tr = document.createElement("tr");
-                        section.columns.forEach(col => {
-                            const th = document.createElement("th");
-                            th.textContent = col;
-                            tr.appendChild(th);
+                    // 3. 判斷是單一表格還是多表格 (Stacked)
+                    if (section.tables && Array.isArray(section.tables)) {
+                        // === 新增邏輯：處理堆疊表格 ===
+                        section.tables.forEach((tbl, index) => {
+                            // 如果有子標題 (Part 1, Part 2)，可以顯示，或僅用 margin 分隔
+                            if (tbl.sub_title) {
+                                // const subH = document.createElement("h5");
+                                // // subH.textContent = tbl.sub_title;
+                                // subH.textContent = ""; // 只用 margin 分隔
+                                // subH.style.margin = "15px 0 5px 0";
+                                // subH.style.color = "#666";
+                                // wrapper.appendChild(subH);
+                                // 如果沒有標題，但不是第一張表，加一點間距
+                                const spacer = document.createElement("div");
+                                spacer.style.height = "20px";
+                                wrapper.appendChild(spacer);
+                            } else if (index > 0) {
+                                // 如果沒有標題，但不是第一張表，加一點間距
+                                const spacer = document.createElement("div");
+                                spacer.style.height = "20px";
+                                wrapper.appendChild(spacer);
+                            }
+                            
+                            const table = createTableDOM(tbl.columns, tbl.data);
+                            wrapper.appendChild(table);
                         });
-                        thead.appendChild(tr);
+                    } else {
+                        // === 原有邏輯：單一表格 ===
+                        const table = createTableDOM(section.columns, section.data);
+                        wrapper.appendChild(table);
                     }
-
-                    // 內容
-                    if (section.data) {
-                        section.data.forEach(row => {
-                            const tr = document.createElement("tr");
-                            section.columns.forEach(col => {
-                                const td = document.createElement("td");
-                                let val = row[col];
-                                if (typeof val === 'number') val = val.toFixed(3);
-                                td.textContent = (val === null || val === undefined) ? "" : val;
-                                tr.appendChild(td);
-                            });
-                            tbody.appendChild(tr);
-                        });
-                    }
-
-                    table.appendChild(thead);
-                    table.appendChild(tbody);
-                    wrapper.appendChild(table);
 
                     // 4. 將做好的整塊表格加到容器中
                     item.sectionsContainer.appendChild(wrapper);
