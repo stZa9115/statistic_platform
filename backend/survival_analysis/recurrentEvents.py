@@ -40,7 +40,7 @@ class RecurrentSurvivalAnalysis(svTest):
         # 針對 p-value 格式化 (Excel 用，顯示部分會在前端處理)
         for index, row in coef_df.iterrows():
             if coef_df.at[index, 'p'] < 0.001:
-                coef_df.at[index, 'p'] = 0.000  # 數值型態較好處理，或保持原樣
+                coef_df.at[index, 'p'] = "<0.001"  # 數值型態較好處理，或保持原樣
 
         # --- 新增：將係數表拆分為兩部分 (Part 1 & Part 2) 以便並排顯示 ---
         all_cols = list(coef_df.columns)

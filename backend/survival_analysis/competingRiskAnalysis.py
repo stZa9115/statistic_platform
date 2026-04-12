@@ -1,8 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 from lifelines import CoxPHFitter, AalenJohansenFitter
-
-# 假設這些是您的基礎類別與註冊裝飾器 (保持與 recurrentEvents.py 一致)
 from .sv_base import svTest
 from . import sv_register
 
@@ -13,53 +11,56 @@ class CompetingRisksAnalysis(svTest):
     result_prefix = "competing"
 
     def run(self, df: pd.DataFrame, group_col: str = 'TREAT'):
-        """
-        執行競爭風險分析：
-        1. 統計模型：使用 Cause-Specific Cox Model 計算 HR 與 P-value。
-        2. 繪圖：使用 Aalen-Johansen Estimator 繪製 Cumulative Incidence Function (CIF)。
-        """
-        
         # --- 0. 參數設定 ---
-        # 根據您的資料結構，這裡需要指定欄位名稱
-        # 若需要動態傳入 event_of_interest，可考慮透過 UI 參數或固定邏輯
-        time_col = 'TIME'       # 存活時間
-        event_col = 'EVENT'     # 事件狀態 (0=Censored, 1=Event of Interest, 2=Competing Risk)
-        event_of_interest = 1   # 主要關注的事件代碼
+        time_col = 'ptime'       
+        event_col = 'pstat'     
+        event_of_interest = 1   
 
-        time_col = 'ptime'       # 存活時間
-        event_col = 'pstat'     # 事件狀態 (0=Censored, 1=Event of Interest, 2=Competing Risk)
-
-        
         # --- 1. 統計分析 (Cause-Specific Cox Model) ---
-        # 原理：將競爭事件 (Competing Risk) 視為 Censored (0)，主要事件視為 1
-        
         cph = CoxPHFitter()
         
-        # 準備 Cox 專用資料
         df_cox = df[[time_col, event_col]].copy()
         if group_col and group_col in df.columns:
             df_cox[group_col] = df[group_col]
-            formula_str = group_col  # 簡單單變量分析，也可改為 "group + age + ..."
+            formula_str = group_col
         else:
-            # 若無分組，僅做整體分析 (雖然 Cox 主要用於比較，但為避免報錯仍需執行)
             df_cox['dummy'] = 1 
             formula_str = 'dummy'
 
-        # 轉換事件狀態：非主要事件全部視為 Censored (0)
         df_cox['event_binary'] = (df_cox[event_col] == event_of_interest).astype(int)
         
-        # 擬合模型
         cph.fit(df_cox, 
                 duration_col=time_col, 
                 event_col='event_binary', 
                 formula=formula_str)
 
-        # --- 2. 準備 Excel/前端 顯示用的 DataFrame ---
+        # --- 2. 準備數據表 ---
         
-        # Sheet 1: Coefficients (主要結果)
-        coef_df = cph.summary.reset_index().rename(columns={'index': 'variable'})
+        # (A) Coefficients 表格處理 (拆分邏輯) --- 修正處 ---
+        coef_df = cph.summary.reset_index()
+        # 強制將第一欄 (原本的 Index) 改名為 'variable'
+        coef_df = coef_df.rename(columns={coef_df.columns[0]: 'variable'})
         
-        # Sheet 2: Model Stats (模型適配度)
+        # P-value 格式化
+        if 'p' in coef_df.columns:
+            for index, row in coef_df.iterrows():
+                if coef_df.at[index, 'p'] < 0.001:
+                    coef_df.at[index, 'p'] = 0.000
+
+        # 拆分欄位 (Part 1 & Part 2)
+        all_cols = list(coef_df.columns)
+        # 排除 'variable' 欄位後計算切分點
+        metric_cols = [c for c in all_cols if c != 'variable']
+        mid_idx = (len(metric_cols) + 1) // 2
+        
+        cols1 = ['variable'] + metric_cols[:mid_idx+1]
+        cols2 = ['variable'] + metric_cols[mid_idx+1:]
+        
+        # 這裡可能會遇到變數少導致 cols2 只有 variable 的情況，但通常不影響顯示
+        coef_df1 = coef_df[cols1]
+        coef_df2 = coef_df[cols2]
+
+        # (B) Model Stats
         stats_data = {
             'Statistic': ['AIC (partial)', 'Log-likelihood', 'Concordance Index', 'Event of Interest'],
             'Value': [
@@ -71,10 +72,10 @@ class CompetingRisksAnalysis(svTest):
         }
         stats_df = pd.DataFrame(stats_data)
         
-        # Sheet 3: Study Info (基本資訊)
+        # (C) Study Info
         info_data = {
-            'Item': ['Observations', 'Events of Interest Observed', 'Unique Subjects'],
-            'Value': [cph._n_examples, cph.event_observed.sum(), df.shape[0]] # 假設每列為一受試者
+            'Item': ['Observations', 'Events of Interest', 'Unique Subjects'],
+            'Value': [cph._n_examples, cph.event_observed.sum(), df.shape[0]]
         }
         info_df = pd.DataFrame(info_data)
 
@@ -87,16 +88,14 @@ class CompetingRisksAnalysis(svTest):
             groups = sorted(df[group_col].unique())
             for g in groups:
                 mask = (df[group_col] == g)
-                # AJF 自動處理競爭風險，不需要手動轉 binary
                 ajf.fit(df.loc[mask, time_col], 
                         df.loc[mask, event_col], 
                         event_of_interest=event_of_interest)
                 ajf.plot(ax=ax, label=f"{group_col}={g}")
             
-            # 在圖上標註 P-value (來自 Cox 模型)
             if 'p' in coef_df.columns and not coef_df.empty:
-                p_val = coef_df['p'].iloc[0] # 取第一個變數的 P 值
-                ax.text(0.05, 0.95, f"Cause-Specific P: {p_val:.4f}", 
+                p_val = coef_df['p'].iloc[0]
+                ax.text(0.05, 0.95, f"CS-Cox P: {p_val:.4f}", 
                         transform=ax.transAxes, fontsize=10,
                         verticalalignment='top', 
                         bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
@@ -112,25 +111,38 @@ class CompetingRisksAnalysis(svTest):
         # --- 4. 封裝回傳格式 ---
         return {
             "fig": fig,
-            "cox_df": coef_df,        # 對應 router 儲存邏輯
+            "cox_df": coef_df,
             "stats_df": stats_df,
             "info_df": info_df,
             "report_text": f"Competing Risks Analysis (Event {event_of_interest}) complete.",
             "sections": [
                 {
-                    "title": "Cause-Specific Cox Coefficients",
-                    "columns": list(coef_df.columns),
-                    "data": coef_df.fillna("").to_dict(orient='records')
+                    "title": "Study Population Information",
+                    "columns": list(info_df.columns),
+                    "data": info_df.to_dict(orient='records'),
+                    "layout": "half"
                 },
                 {
                     "title": "Model Statistics",
                     "columns": list(stats_df.columns),
-                    "data": stats_df.to_dict(orient='records')
+                    "data": stats_df.to_dict(orient='records'),
+                    "layout": "half"
                 },
                 {
-                    "title": "Study Population Information",
-                    "columns": list(info_df.columns),
-                    "data": info_df.to_dict(orient='records')
+                    "title": "Cause-Specific Cox Coefficients",
+                    "layout": "full",
+                    "tables": [
+                        {
+                            "sub_title": "Part 1: Coefficients & SE",
+                            "columns": cols1,
+                            "data": coef_df1.fillna("").to_dict(orient='records')
+                        },
+                        {
+                            "sub_title": "Part 2: Significance & CI",
+                            "columns": cols2,
+                            "data": coef_df2.fillna("").to_dict(orient='records')
+                        }
+                    ]
                 }
             ]
         }
