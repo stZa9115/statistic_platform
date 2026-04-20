@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>統計平台 - 多層次模型 (HLM)</title>
+    <link rel="stylesheet" href="../style.css"> </head>
+<body>
+    <div class="container">
+        <h1>多層次模型分析 (HLM)</h1>
+        <div class="card">
+            <div class="form-group">
+                <label>數據檔案 (CSV):</label>
+                <input type="file" id="csvFile">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>結果變項 (Y):</label>
+                    <!-- <input type="text" id="target" placeholder="如: 認知表現"> -->
+                    <input type="text" id="target" value="認知表現">
+
+                </div>
+                <div class="form-group">
+                    <label>Level 2:</label>
+                    <!-- <input type="text" id="g2" placeholder="如: 學校"> -->
+                    <input type="text" id="g2" value="學校">
+                </div>
+                <div class="form-group">
+                    <label>Level 3:</label>
+                    <!-- <input type="text" id="g3" placeholder="如: 國家"> -->
+                    <input type="text" id="g3" value="區域">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Level 1 自變項 (逗號分隔):</label>
+                <!-- <input type="text" id="l1_vars" placeholder="var1, var2"> -->
+                <input type="text" id="l1_vars" value="AI使用程度code,英語能力code">
+            </div>
+            <div class="form-group">
+                <label>Level 2 自變項:</label>
+                <!-- <input type="text" id="l2_vars"> -->
+                <input type="text" id="l2_vars" value="數位政策推行code">
+            </div>
+            <div class="form-group">
+                <label>Level 3 自變項:</label>
+                <!-- <input type="text" id="l3_vars"> -->
+                <input type="text" id="l3_vars" value="武力預算展現">
+            </div>
+            
+            <div class="button-group">
+                <button id="runBtn" class="btn-primary">執行分析</button>
+                <button id="downloadBtn" class="btn-secondary" style="display:none;">下載 Excel 報表</button>
+            </div>
+        </div>
+
+        <div id="loading" style="display:none;">運算中，請稍候...</div>
+        <div id="resultContainer" class="result-area"></div>
+    </div>
+
+    <script src="../config.js"></script> <script>
+        // 注意：因為 HLM 是獨立 server，這裡手動指定 URL
+        const HLM_API_URL = "http://localhost:5001"; 
+
+        document.getElementById('runBtn').onclick = async () => {
+            const file = document.getElementById('csvFile').files[0];
+            if(!file) return alert("請選擇檔案");
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('target', document.getElementById('target').value);
+            formData.append('g2', document.getElementById('g2').value);
+            formData.append('g3', document.getElementById('g3').value);
+
+            // 處理陣列
+            document.getElementById('l1_vars').value.split(',').forEach(v => formData.append('l1_vars[]', v.trim()));
+            document.getElementById('l2_vars').value.split(',').forEach(v => formData.append('l2_vars[]', v.trim()));
+            document.getElementById('l3_vars').value.split(',').forEach(v => formData.append('l3_vars[]', v.trim()));
+
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('resultContainer').innerHTML = '';
+
+            try {
+                const res = await fetch(`${HLM_API_URL}/analyze`, { method: 'POST', body: formData });
+                const json = await res.json();
+                
+                if(json.status === 'success') {
+                    renderTables(json.data);
+                    document.getElementById('downloadBtn').style.display = 'inline-block';
+                } else {
+                    alert("錯誤: " + json.message);
+                }
+            } catch (e) {
+                alert("連線失敗");
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        };
+
+        document.getElementById('downloadBtn').onclick = () => {
+            window.location.href = `${HLM_API_URL}/download`;
+        };
+
+        function renderTables(data) {
+            const container = document.getElementById('resultContainer');
+            container.innerHTML = ''; // 清空先前的結果
+            
+            for (let step in data) {
+                const s = data[step];
+                let html = `<div class="step-card">
+                    <h2>${s.name}</h2>
+                    <h4>固定效果</h4>${generateHTMLTable(s.fixed)}
+                    <h4>隨機效果</h4>${generateHTMLTable(s.random)}`;
+                
+                // 關鍵修改：檢查 s.fit 是否存在且有資料，才渲染該區塊
+                if (s.fit && s.fit.length > 0) {
+                    html += `<h4>模型適配度</h4>${generateHTMLTable(s.fit)}`;
+                }
+                
+                html += `</div><hr>`;
+                container.innerHTML += html;
+            }
+}
+
+        function generateHTMLTable(data) {
+            if(!data || data.length === 0) return "無數據";
+            let headers = Object.keys(data[0]);
+            let html = `<table><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>`;
+            data.forEach(row => {
+                html += `<tr>${headers.map(h => `<td>${row[h]}</td>`).join('')}</tr>`;
+            });
+            html += `</tbody></table>`;
+            return html;
+        }
+    </script>
+</body>
+</html>
