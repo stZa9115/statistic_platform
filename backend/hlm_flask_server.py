@@ -14,6 +14,7 @@ app.json.sort_keys = False  # 這是給新版 Flask (>=2.2) 使用的
 
 # 用於暫存最後一次分析結果的字典 (簡單實作)
 last_analysis_results = {}
+last_desc_stats = {}
 
 def safe_to_dict(df):
     if df is None or df.empty:
@@ -46,7 +47,7 @@ def compute_descriptive_stats(df, target, l1_vars, l2_vars, l3_vars, g3):
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    global last_analysis_results
+    global last_analysis_results, last_desc_stats
     try:
         file = request.files['file']
         target = request.form.get('target', '').strip()
@@ -112,6 +113,7 @@ def analyze():
 
         # 描述性統計
         desc_stats = compute_descriptive_stats(df, target, l1_vars, l2_vars, l3_vars, g3)
+        last_desc_stats = desc_stats
         desc_json = {var: safe_to_dict(stat_df) for var, stat_df in desc_stats.items()}
 
         # 回傳給前端 JSON (使用我們寫好的 safe_to_dict 過濾 NaN)
@@ -132,18 +134,28 @@ def analyze():
         return jsonify({"status": "error", "message": str(e)}), 500
 @app.route('/download', methods=['GET'])
 def download():
-    global last_analysis_results
+    global last_analysis_results, last_desc_stats
     if not last_analysis_results:
         return "No results available", 404
 
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        # 描述性統計 (第一個 sheet)
+        if last_desc_stats:
+            ws_name = "描述性統計"
+            row = 0
+            for var, stat_df in last_desc_stats.items():
+                stat_df.to_excel(writer, sheet_name=ws_name, startrow=row + 1, index=False)
+                writer.sheets[ws_name].write(row, 0, var)
+                row += len(stat_df) + 4  # 1 標題 + 1 欄位列 + 資料列 + 1 空白
+
+        # 各步驟結果
         for step_data in last_analysis_results.values():
             sheet_name = step_data["name"][:31]
             step_data["fixed"].to_excel(writer, sheet_name=sheet_name, startrow=0, index=False)
             step_data["random"].to_excel(writer, sheet_name=sheet_name, startrow=len(step_data["fixed"])+2, index=False)
             step_data["fit"].to_excel(writer, sheet_name=sheet_name, startrow=len(step_data["fixed"])+len(step_data["random"])+4, index=False)
-    
+
     output.seek(0)
     return send_file(output, as_attachment=True, download_name="HLM_Analysis_Results.xlsx")
 
