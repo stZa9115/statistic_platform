@@ -280,6 +280,14 @@ body.stat-repeated_anova {
   --stat-accent-hover: #f06292; /* 按鈕 Hover */
 }
 
+/* 多層次模型 (HLM) */
+body.stat-hlm {
+  --stat-bg: #f5f0e8;
+  --stat-title: #d4b896;
+  --stat-accent: #a07850;
+  --stat-accent-hover: #7d5c38;
+}
+
 /* 列表頁按鈕 hover 效果 (假設這是第 5 個或新增的按鈕) */
 /* 若您在首頁新增了對應按鈕，請確認其 class 對應名稱 */
 body.stat-list .small-buttons .btn-repeated:hover {

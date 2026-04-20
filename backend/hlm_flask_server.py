@@ -3,7 +3,6 @@ from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 import pandas as pd
 import io
-import os
 import traceback
 # 導入你原本的邏輯 (假設存放在同目錄的 hlm_logic.py 或直接寫入此檔)
 from hlm_pipeline import run_step1, run_step2, run_step3, run_step4, run_step5, run_step6
@@ -19,9 +18,31 @@ last_analysis_results = {}
 def safe_to_dict(df):
     if df is None or df.empty:
         return []
-    # 將 NaN, Inf 等替換為 None (JSON 會轉成 null) 或空字串
     df_clean = df.replace([np.inf, -np.inf, np.nan], None)
     return df_clean.to_dict(orient='records')
+
+def compute_descriptive_stats(df, target, l1_vars, l2_vars, l3_vars, g3):
+    all_vars = [target] + l1_vars + l2_vars + l3_vars
+    stats = {}
+    for var in all_vars:
+        if var not in df.columns:
+            continue
+        grouped = df.groupby(g3)[var].agg(
+            樣本數='count', 最小值='min', 最大值='max', 平均數='mean', 標準差='std'
+        ).reset_index().rename(columns={g3: '組別'})
+        for col in ['最小值', '最大值', '平均數', '標準差']:
+            grouped[col] = grouped[col].round(2)
+        total_row = {
+            '組別': '總和',
+            '樣本數': int(df[var].count()),
+            '最小值': round(float(df[var].min()), 2),
+            '最大值': round(float(df[var].max()), 2),
+            '平均數': round(float(df[var].mean()), 2),
+            '標準差': round(float(df[var].std()), 2),
+        }
+        grouped = pd.concat([grouped, pd.DataFrame([total_row])], ignore_index=True)
+        stats[var] = grouped
+    return stats
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
@@ -89,25 +110,21 @@ def analyze():
 
         last_analysis_results = results
 
+        # 描述性統計
+        desc_stats = compute_descriptive_stats(df, target, l1_vars, l2_vars, l3_vars, g3)
+        desc_json = {var: safe_to_dict(stat_df) for var, stat_df in desc_stats.items()}
+
         # 回傳給前端 JSON (使用我們寫好的 safe_to_dict 過濾 NaN)
         json_response = {}
         for k, v in results.items():
-            if k == "step1":
-                json_response[k] = {
-                    "name": v["name"],
-                    "fixed": safe_to_dict(v["fixed"]),
-                    "random": safe_to_dict(v["random"]),
-                    "fit": safe_to_dict(v["fit"])
-                }
-            else:
-                json_response[k] = {
-                    "name": v["name"],
-                    "fixed": safe_to_dict(v["fixed"]),
-                    "random": safe_to_dict(v["random"]),
-                    "fit": safe_to_dict(v["fit"])
-                }
+            json_response[k] = {
+                "name": v["name"],
+                "fixed": safe_to_dict(v["fixed"]),
+                "random": safe_to_dict(v["random"]),
+                "fit": safe_to_dict(v["fit"])
+            }
 
-        return jsonify({"status": "success", "data": json_response})
+        return jsonify({"status": "success", "data": json_response, "descriptive": {"g3_label": g3, "tables": desc_json}})
 
     except Exception as e:
         error_trace = traceback.format_exc()
@@ -121,7 +138,7 @@ def download():
 
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        for step_key, step_data in last_analysis_results.items():
+        for step_data in last_analysis_results.values():
             sheet_name = step_data["name"][:31]
             step_data["fixed"].to_excel(writer, sheet_name=sheet_name, startrow=0, index=False)
             step_data["random"].to_excel(writer, sheet_name=sheet_name, startrow=len(step_data["fixed"])+2, index=False)

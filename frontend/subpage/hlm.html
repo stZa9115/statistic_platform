@@ -2,12 +2,108 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>統計平台 - 多層次模型 (HLM)</title>
-    <link rel="stylesheet" href="../style.css"> </head>
-<body>
+    <link rel="stylesheet" href="../style.css">
+    <style>
+        .action-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            margin-bottom: 40px;
+        }
+        .action-buttons button {
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .block-card {
+            background-color: white;
+            border-radius: 25px;
+            padding: 30px;
+            margin-bottom: 30px;
+            text-align: left;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: bold;
+            font-size: 0.95em;
+        }
+        .form-group input[type="text"],
+        .form-group input[type="file"] {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 0.95em;
+        }
+        .form-row {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .form-row .form-group {
+            flex: 1;
+            min-width: 150px;
+        }
+        /* 表格樣式 */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            margin-bottom: 20px;
+            font-size: 0.95em;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px 12px;
+            text-align: center;
+        }
+        th {
+            background-color: #eee4e1;
+        }
+        /* 總和列加粗上框線 */
+        tr.total-row td {
+            font-weight: bold;
+            border-top: 2px solid #888;
+        }
+        .step-card {
+            background-color: white;
+            border-radius: 20px;
+            padding: 20px 30px;
+            margin-bottom: 30px;
+            text-align: left;
+        }
+        .step-card h2 {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .step-card h4 {
+            margin-top: 20px;
+            text-align: center;
+        }
+        hr {
+            border: none;
+            margin: 0;
+        }
+        #loading {
+            padding: 20px;
+            font-size: 1.1em;
+            text-align: center;
+        }
+    </style>
+</head>
+<body class="stat-hlm">
     <div class="container">
-        <h1>多層次模型分析 (HLM)</h1>
-        <div class="card">
+        <div class="title">多層次模型分析 (HLM)</div>
+
+        <div class="block-card">
             <div class="form-group">
                 <label>數據檔案 (CSV):</label>
                 <input type="file" id="csvFile">
@@ -15,50 +111,47 @@
             <div class="form-row">
                 <div class="form-group">
                     <label>結果變項 (Y):</label>
-                    <!-- <input type="text" id="target" placeholder="如: 認知表現"> -->
                     <input type="text" id="target" value="認知表現">
-
                 </div>
                 <div class="form-group">
-                    <label>Level 2:</label>
-                    <!-- <input type="text" id="g2" placeholder="如: 學校"> -->
+                    <label>Level 2 群組變項:</label>
                     <input type="text" id="g2" value="學校">
                 </div>
                 <div class="form-group">
-                    <label>Level 3:</label>
-                    <!-- <input type="text" id="g3" placeholder="如: 國家"> -->
+                    <label>Level 3 群組變項:</label>
                     <input type="text" id="g3" value="區域">
                 </div>
             </div>
             <div class="form-group">
                 <label>Level 1 自變項 (逗號分隔):</label>
-                <!-- <input type="text" id="l1_vars" placeholder="var1, var2"> -->
                 <input type="text" id="l1_vars" value="AI使用程度code,英語能力code">
             </div>
             <div class="form-group">
-                <label>Level 2 自變項:</label>
-                <!-- <input type="text" id="l2_vars"> -->
+                <label>Level 2 自變項 (逗號分隔):</label>
                 <input type="text" id="l2_vars" value="數位政策推行code">
             </div>
             <div class="form-group">
-                <label>Level 3 自變項:</label>
-                <!-- <input type="text" id="l3_vars"> -->
+                <label>Level 3 自變項 (逗號分隔):</label>
                 <input type="text" id="l3_vars" value="武力預算展現">
-            </div>
-            
-            <div class="button-group">
-                <button id="runBtn" class="btn-primary">執行分析</button>
-                <button id="downloadBtn" class="btn-secondary" style="display:none;">下載 Excel 報表</button>
             </div>
         </div>
 
+        <div class="action-buttons">
+            <button id="runBtn" class="sidebar-button-style">執行分析</button>
+            <button id="downloadBtn" class="sidebar-button-style downloadLink" style="display:none;">下載 Excel 報表</button>
+        </div>
+
         <div id="loading" style="display:none;">運算中，請稍候...</div>
-        <div id="resultContainer" class="result-area"></div>
+        <div id="resultContainer"></div>
+
+        <div class="back-button-container">
+            <a href="../statisticList.html" class="back-button">返回</a>
+        </div>
     </div>
 
-    <script src="../config.js"></script> <script>
-        // 注意：因為 HLM 是獨立 server，這裡手動指定 URL
-        const HLM_API_URL = "http://localhost:5001"; 
+    <script src="../config.js"></script>
+    <script>
+        const HLM_API_URL = "http://localhost:5001";
 
         document.getElementById('runBtn').onclick = async () => {
             const file = document.getElementById('csvFile').files[0];
@@ -70,7 +163,6 @@
             formData.append('g2', document.getElementById('g2').value);
             formData.append('g3', document.getElementById('g3').value);
 
-            // 處理陣列
             document.getElementById('l1_vars').value.split(',').forEach(v => formData.append('l1_vars[]', v.trim()));
             document.getElementById('l2_vars').value.split(',').forEach(v => formData.append('l2_vars[]', v.trim()));
             document.getElementById('l3_vars').value.split(',').forEach(v => formData.append('l3_vars[]', v.trim()));
@@ -81,9 +173,12 @@
             try {
                 const res = await fetch(`${HLM_API_URL}/analyze`, { method: 'POST', body: formData });
                 const json = await res.json();
-                
+
                 if(json.status === 'success') {
-                    renderTables(json.data);
+                    const container = document.getElementById('resultContainer');
+                    container.innerHTML = '';
+                    renderDescriptiveStats(json.descriptive, container);
+                    renderTables(json.data, container);
                     document.getElementById('downloadBtn').style.display = 'inline-block';
                 } else {
                     alert("錯誤: " + json.message);
@@ -99,33 +194,65 @@
             window.location.href = `${HLM_API_URL}/download`;
         };
 
-        function renderTables(data) {
-            const container = document.getElementById('resultContainer');
-            container.innerHTML = ''; // 清空先前的結果
-            
+        function renderDescriptiveStats(descriptive, container) {
+            if (!descriptive || !descriptive.tables) return;
+            const g3Label = descriptive.g3_label;
+            let html = `<div class="step-card"><h2>描述性統計</h2>`;
+            for (const varName in descriptive.tables) {
+                const rows = descriptive.tables[varName];
+                html += `<h4>${varName}</h4>
+                <table>
+                  <thead>
+                    <tr>
+                      <th rowspan="2">${g3Label}</th>
+                      <th rowspan="2">樣本數</th>
+                      <th colspan="4">${varName}</th>
+                    </tr>
+                    <tr>
+                      <th>最小值</th><th>最大值</th><th>平均數</th><th>標準差</th>
+                    </tr>
+                  </thead>
+                  <tbody>`;
+                rows.forEach(row => {
+                    const isTotal = row['組別'] === '總和';
+                    html += `<tr${isTotal ? ' class="total-row"' : ''}>
+                        <td>${row['組別']}</td>
+                        <td>${row['樣本數']}</td>
+                        <td>${row['最小值']}</td>
+                        <td>${row['最大值']}</td>
+                        <td>${row['平均數']}</td>
+                        <td>${row['標準差']}</td>
+                    </tr>`;
+                });
+                html += `</tbody></table>`;
+            }
+            html += `</div><hr>`;
+            container.innerHTML += html;
+        }
+
+        function renderTables(data, container) {
             for (let step in data) {
                 const s = data[step];
                 let html = `<div class="step-card">
                     <h2>${s.name}</h2>
                     <h4>固定效果</h4>${generateHTMLTable(s.fixed)}
                     <h4>隨機效果</h4>${generateHTMLTable(s.random)}`;
-                
-                // 關鍵修改：檢查 s.fit 是否存在且有資料，才渲染該區塊
+
                 if (s.fit && s.fit.length > 0) {
                     html += `<h4>模型適配度</h4>${generateHTMLTable(s.fit)}`;
                 }
-                
+
                 html += `</div><hr>`;
                 container.innerHTML += html;
             }
-}
+        }
 
         function generateHTMLTable(data) {
-            if(!data || data.length === 0) return "無數據";
+            if(!data || data.length === 0) return "<p>無數據</p>";
             let headers = Object.keys(data[0]);
             let html = `<table><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>`;
             data.forEach(row => {
-                html += `<tr>${headers.map(h => `<td>${row[h]}</td>`).join('')}</tr>`;
+                html += `<tr>${headers.map(h => `<td>${row[h] ?? ''}</td>`).join('')}</tr>`;
             });
             html += `</tbody></table>`;
             return html;
