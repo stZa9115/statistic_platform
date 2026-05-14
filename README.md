@@ -85,5 +85,8 @@ python hlm_flask_server.py
 ## 待辦
 
 - HLM 計算公式補充
-- HLM 文字描述說明
 - 加入其他統計圖表
+
+
+## 之後增加
+ - sme
