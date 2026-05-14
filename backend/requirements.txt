@@ -48,3 +48,4 @@ tzdata==2025.3
 uvicorn==0.38.0
 werkzeug==3.1.4
 xarray==2025.6.1
+xlsxwriter==3.2.5

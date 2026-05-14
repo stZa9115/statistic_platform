@@ -8,6 +8,14 @@ services:
     volumes:
       - ./backend_results:/app/results
 
+  hlm_backend:
+    build: ./backend
+    container_name: hlm_backend
+    restart: always
+    ports:
+      - "5001:5001"
+    command: ["python", "hlm_flask_server.py"]
+
   frontend:
     build: ./frontend
     container_name: stat_frontend
@@ -16,3 +24,4 @@ services:
       - "8080:80"
     depends_on:
       - backend
+      - hlm_backend
