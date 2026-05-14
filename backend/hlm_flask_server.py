@@ -3,7 +3,10 @@ from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 import pandas as pd
 import io
+import os
 import traceback
+
+FORMULA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'frontend', 'HLM_formula')
 # 導入你原本的邏輯 (假設存放在同目錄的 hlm_logic.py 或直接寫入此檔)
 from hlm_pipeline import run_step1, run_step2, run_step3, run_step4, run_step5, run_step6
 import numpy as np
@@ -158,6 +161,16 @@ def download():
 
     output.seek(0)
     return send_file(output, as_attachment=True, download_name="HLM_Analysis_Results.xlsx")
+
+@app.route('/formula/<int:step>', methods=['GET'])
+def get_formula(step):
+    try:
+        filepath = os.path.join(FORMULA_DIR, f'step{step}.txt')
+        with open(filepath, 'r', encoding='utf-8') as f:
+            content = f.read()
+        return content, 200, {'Content-Type': 'text/plain; charset=utf-8'}
+    except FileNotFoundError:
+        return '', 404
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)

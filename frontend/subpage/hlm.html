@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>統計平台 - 多層次模型 (HLM)</title>
     <link rel="stylesheet" href="../style.css">
+    <script>
+        MathJax = {
+            tex: { displayMath: [['$$', '$$'], ['\\[', '\\]']] },
+            options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre'] }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
     <style>
         .action-buttons {
             display: flex;
@@ -68,7 +75,6 @@
         th {
             background-color: #eee4e1;
         }
-        /* 總和列加粗上框線 */
         tr.total-row td {
             font-weight: bold;
             border-top: 2px solid #888;
@@ -87,6 +93,31 @@
         .step-card h4 {
             margin-top: 20px;
             text-align: center;
+        }
+        /* 左表右公式 */
+        .step-content {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+        }
+        .step-tables {
+            flex: 1;
+            min-width: 0;
+            overflow-x: auto;
+        }
+        .step-formula {
+            flex: 0 0 360px;
+            padding: 20px 15px;
+            background: #faf7f2;
+            border-radius: 12px;
+            border: 1px solid #ddd0bb;
+            text-align: center;
+            font-size: 1em;
+            overflow-x: auto;
+        }
+        @media (max-width: 900px) {
+            .step-content { flex-direction: column; }
+            .step-formula { flex: none; width: 100%; box-sizing: border-box; }
         }
         hr {
             border: none;
@@ -178,7 +209,19 @@
                     const container = document.getElementById('resultContainer');
                     container.innerHTML = '';
                     renderDescriptiveStats(json.descriptive, container);
-                    renderTables(json.data, container);
+
+                    // 並行 fetch 各步驟公式
+                    const stepKeys = Object.keys(json.data);
+                    const formulaMap = {};
+                    await Promise.all(stepKeys.map(async key => {
+                        const num = key.replace('step', '');
+                        try {
+                            const r = await fetch(`${HLM_API_URL}/formula/${num}`);
+                            formulaMap[key] = r.ok ? await r.text() : '';
+                        } catch { formulaMap[key] = ''; }
+                    }));
+
+                    renderTables(json.data, container, formulaMap);
                     document.getElementById('downloadBtn').style.display = 'inline-block';
                 } else {
                     alert("錯誤: " + json.message);
@@ -193,6 +236,10 @@
         document.getElementById('downloadBtn').onclick = () => {
             window.location.href = `${HLM_API_URL}/download`;
         };
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
 
         function renderDescriptiveStats(descriptive, container) {
             if (!descriptive || !descriptive.tables) return;
@@ -230,20 +277,32 @@
             container.innerHTML += html;
         }
 
-        function renderTables(data, container) {
+        function renderTables(data, container, formulaMap = {}) {
             for (let step in data) {
                 const s = data[step];
-                let html = `<div class="step-card">
-                    <h2>${s.name}</h2>
+                const formula = formulaMap[step] || '';
+
+                const tablesHtml = `
                     <h4>固定效果</h4>${generateHTMLTable(s.fixed)}
-                    <h4>隨機效果</h4>${generateHTMLTable(s.random)}`;
+                    <h4>隨機效果</h4>${generateHTMLTable(s.random)}
+                    ${s.fit && s.fit.length > 0 ? `<h4>模型適配度</h4>${generateHTMLTable(s.fit)}` : ''}`;
 
-                if (s.fit && s.fit.length > 0) {
-                    html += `<h4>模型適配度</h4>${generateHTMLTable(s.fit)}`;
-                }
+                const formulaHtml = formula
+                    ? `<div class="step-formula">$$${escapeHtml(formula)}$$</div>`
+                    : '';
 
-                html += `</div><hr>`;
+                const html = `<div class="step-card">
+                    <h2>${s.name}</h2>
+                    <div class="step-content">
+                        <div class="step-tables">${tablesHtml}</div>
+                        ${formulaHtml}
+                    </div>
+                </div><hr>`;
                 container.innerHTML += html;
+            }
+            // 通知 MathJax 重新渲染動態插入的數學式
+            if (window.MathJax) {
+                MathJax.typesetPromise([container]).catch(err => console.warn('MathJax:', err));
             }
         }
 

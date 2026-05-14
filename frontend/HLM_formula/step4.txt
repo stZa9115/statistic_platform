@@ -1,0 +1,6 @@
+\begin{align*}
+\text{階層 一} && Y_{ijk} &= \pi_{0jk} + e_{ijk} \\
+\text{階層 二} && \pi_{0jk} &= \beta_{00k} + \beta_{01k}(X_{jk}) + r_{0jk} \\
+\text{階層 三} && \beta_{00k} &= \gamma_{000} + \mu_{00k} \\
+&& \beta_{01k} &= \gamma_{100}
+\end{align*}

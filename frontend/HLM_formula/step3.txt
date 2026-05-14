@@ -1,0 +1,7 @@
+\begin{align*}
+\text{階層 一} && Y_{ijk} &= \pi_{0jk} + \pi_{1jk}(a_{ijk}) + e_{ijk} \ , \ e_{ijk} \sim N(0, \sigma^2) \\
+\text{階層 二} && \pi_{0jk} &= \beta_{00k} + r_{0jk} \\
+&& \pi_{1jk} &= \beta_{10k} + r_{1jk} \\
+\text{階層 三} && \beta_{00k} &= \gamma_{000} + \mu_{00k} \\
+&& \beta_{10k} &= \gamma_{100}
+\end{align*}
